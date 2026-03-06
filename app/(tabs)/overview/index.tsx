@@ -34,7 +34,7 @@ const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
       icon: "document-text-outline",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       currentValue: "45",
       previousValue: "40",
       change: "+12.5%",
@@ -69,7 +69,7 @@ const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
       icon: "document-text-outline",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       currentValue: "290",
       previousValue: "265",
       change: "+9.4%",
@@ -104,7 +104,7 @@ const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
       icon: "document-text-outline",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       currentValue: "642",
       previousValue: "555",
       change: "+15.7%",
@@ -139,7 +139,7 @@ const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
       icon: "document-text-outline",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       currentValue: "1,980",
       previousValue: "1,750",
       change: "+13.1%",
@@ -174,7 +174,7 @@ const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
       icon: "document-text-outline",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       currentValue: "3,920",
       previousValue: "3,540",
       change: "+10.7%",
@@ -209,7 +209,7 @@ const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
       icon: "document-text-outline",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       currentValue: "7,860",
       previousValue: "6,980",
       change: "+12.6%",
@@ -347,7 +347,7 @@ export default function Dashboard() {
       color: "blue",
     },
     {
-      title: "Tổng ENROLL",
+      title: "Tổng NE",
       value: "642",
       change: "+15.7%",
       isPositive: true,

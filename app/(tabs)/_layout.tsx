@@ -45,7 +45,9 @@ export default function TabLayout() {
       screenOptions={{
         header: ({ route }) => {
           const currentTab = TAB_CONFIG.find((t) => t.name === route.name);
-          return <MobileHeader title={currentTab?.label ?? "Dashboard"} />;
+          return (
+            <MobileHeader title={(currentTab?.label as any) ?? "Dashboard"} />
+          );
         },
       }}
       tabBar={({ state, navigation }) => {

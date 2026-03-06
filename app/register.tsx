@@ -258,7 +258,7 @@ const RegisterPage: FC = () => {
                   colors={["#2563EB", "#3B82F6"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
-                  className="py-3.5 rounded-xl items-center justify-center flex-row space-x-2"
+                  className="py-3.5 rounded-xl items-center justify-center flex-row gap-x-2"
                   style={{ borderRadius: 12 }}
                 >
                   {loading ? (

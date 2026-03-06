@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Image, Modal, Pressable, Text, View } from "react-native";
+import NotificationPopover from "./Notification";
 
 const userInfo = {
   name: "Nguyễn Minh Tuấn",
@@ -60,7 +61,7 @@ function AvatarMenu() {
           <Pressable
             onPress={() => {
               setOpen(false);
-              router.push("/settings");
+              router.push("/setting");
             }}
             className="flex-row items-center gap-3 px-4 py-3"
           >
@@ -90,14 +91,6 @@ function AvatarMenu() {
         </View>
       </Modal>
     </>
-  );
-}
-
-function NotificationPopover() {
-  return (
-    <Pressable className="w-9 h-9 items-center justify-center rounded-xl bg-gray-100">
-      <Ionicons name="notifications-outline" size={20} color="#374151" />
-    </Pressable>
   );
 }
 

@@ -51,7 +51,7 @@ export default function KPIPage() {
               {yearlyKPI.soLead.toLocaleString("vi-VN")}
             </Text>
           </View>
-          <View className="flex ">
+          <View className="flex flex-row">
             {/* REG */}
 
             <View className="p-4 border-b border-gray-100 flex-1">

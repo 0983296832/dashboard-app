@@ -9,6 +9,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -228,7 +229,13 @@ export default function LoginScreen() {
                   </Text>
                 </Pressable>
 
-                <Text className="text-emerald-600 text-sm">Quên mật khẩu?</Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/forgot-password")}
+                >
+                  <Text className="text-emerald-600 text-sm">
+                    Quên mật khẩu?
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {/* LOGIN BUTTON */}
