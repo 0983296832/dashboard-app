@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/stores/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -14,9 +15,11 @@ const userInfo = {
 function AvatarMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { logout, user } = useAuthStore();
 
   const handleLogout = () => {
     setOpen(false);
+    logout();
     router.replace("/login");
   };
 
@@ -27,7 +30,7 @@ function AvatarMenu() {
         onPress={() => setOpen(true)}
         className="w-9 h-9 rounded-full overflow-hidden border-2 border-emerald-200"
       >
-        <Image source={{ uri: userInfo.avatar }} className="w-full h-full" />
+        <Image source={{ uri: user.image }} className="w-full h-full" />
       </Pressable>
 
       {/* Modal menu */}
@@ -43,13 +46,13 @@ function AvatarMenu() {
           {/* User Info */}
           <View className="px-4 py-3 border-b border-gray-100 flex-row items-center gap-3">
             <Image
-              source={{ uri: userInfo.avatar }}
+              source={{ uri: user.image }}
               className="w-10 h-10 rounded-full"
             />
 
             <View className="flex-1">
               <Text className="text-sm font-bold text-gray-800">
-                {userInfo.name}
+                {user.firstName} {user.lastName}
               </Text>
               <Text className="text-xs text-emerald-600">
                 {userInfo.position}

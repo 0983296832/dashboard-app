@@ -1,34 +1,78 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { createJSONStorage, devtools, persist } from "zustand/middleware";
 
-type AuthState = {
-  user: string | null;
-  isHydrated: boolean;
-  login: (email: string) => void;
-  logout: () => void;
-  setHydrated: () => void;
+const secureStorage = {
+  getItem: async (name: string) => {
+    return await SecureStore.getItemAsync(name);
+  },
+  setItem: async (name: string, value: string) => {
+    await SecureStore.setItemAsync(name, value);
+  },
+  removeItem: async (name: string) => {
+    await SecureStore.deleteItemAsync(name);
+  },
 };
 
+interface AuthState {
+  accessToken: string | null;
+  refreshToken: string | null;
+  user: any | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  setTokens: (accessToken: string, refreshToken: string) => void;
+  setUser: (user: any) => void;
+  login: (accessToken: string, refreshToken: string, user: any) => void;
+  logout: () => void;
+}
+
 export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isHydrated: false,
+  devtools(
+    persist(
+      (set) => ({
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        isAuthenticated: false,
+        isLoading: true,
 
-      login: (email) => set({ user: email }),
+        setTokens: (accessToken, refreshToken) =>
+          set({
+            accessToken,
+            refreshToken,
+            isAuthenticated: !!accessToken,
+          }),
 
-      logout: () => set({ user: null }),
+        setUser: (user) => set({ user }),
 
-      setHydrated: () => set({ isHydrated: true }),
-    }),
-    {
-      name: "auth-storage",
-      storage: createJSONStorage(() => AsyncStorage),
+        login: (accessToken, refreshToken, user) =>
+          set({
+            accessToken,
+            refreshToken,
+            // user,
+            isAuthenticated: true,
+            isLoading: false,
+          }),
 
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated();
+        logout: () =>
+          set({
+            accessToken: null,
+            refreshToken: null,
+            // user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          }),
+      }),
+      {
+        name: "auth-storage",
+        storage: createJSONStorage(() => secureStorage),
+        onRehydrateStorage: () => (state) => {
+          if (state) {
+            state.isLoading = false;
+            state.isAuthenticated = !!state.accessToken;
+          }
+        },
       },
-    },
+    ),
   ),
 );

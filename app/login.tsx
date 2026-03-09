@@ -1,3 +1,4 @@
+import authServices from "@/api/authApi";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -46,16 +47,29 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    await fakeApi();
+    try {
+      setLoading(true);
+      const res = await authServices.login({
+        username: "emilys",
+        password: "emilyspass",
+        expiresInMins: 1, // optional, defaults to 60
+      });
+      console.log(res);
+      login(res?.data?.accessToken, res?.data?.refreshToken, {});
+      router.replace("/overview");
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+    }
 
     // if (email !== "admin@tuyensinh.edu.vn" || password !== "admin123") {
     //   throw new Error("Sai tài khoản hoặc mật khẩu");
     // }
 
     // Gọi store
-    login(email);
+    // login(email);
 
-    router.replace("/overview");
+    // router.replace("/overview");
   };
 
   const handleRegister = async () => {

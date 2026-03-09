@@ -1,3 +1,4 @@
+import mainServices from "@/api/main";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
@@ -329,6 +330,15 @@ export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
   const [compareType, setCompareType] = useState("month");
 
+  const getUsers = async () => {
+    try {
+      const data: any = await mainServices.getUsers();
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const stats = [
     {
       title: "Tổng Lead",
@@ -408,7 +418,7 @@ export default function Dashboard() {
         {/* Chart Section */}
         <View className="bg-white rounded-2xl p-5 mt-6 shadow mb-6">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="font-bold text-gray-800">
+            <Text className="font-bold text-gray-800" onPress={getUsers}>
               Hiệu suất theo thời gian
             </Text>
 
