@@ -3,7 +3,7 @@ import axios from "axios";
 
 const mainServices = {
   getCurrentUser: (filter?: object) => {
-    const url = "/auth/me";
+    const url = "/me";
     return axiosInstance.get(url, { params: filter });
   },
   getUsers: (filter?: object) => {

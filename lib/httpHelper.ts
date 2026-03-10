@@ -1,5 +1,5 @@
 const getBaseUrl = () => {
-  return "https://dummyjson.com";
+  return "https://crm-sync.demo-api.io.vn/api";
   //   const currentURL = window.location.origin; // Lấy URL hiện tại
   //   return "https://vhs-education.com";
   //   if (

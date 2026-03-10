@@ -1,7 +1,10 @@
-import mainServices from "@/api/main";
+import overviewServices from "@/api/overview";
+import { ChartColors } from "@/constants";
+import { formatNumber } from "@/lib/numberHelper";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -308,7 +311,7 @@ function DonutChart({ data }: { data: typeof channelData }) {
           {hoveredItem ? (
             <>
               <Text className="text-lg font-bold text-gray-800">
-                {hoveredItem.value}
+                {formatNumber(hoveredItem.value)}
               </Text>
               <Text className="text-xs text-gray-500">
                 {hoveredItem.percent}%
@@ -316,7 +319,9 @@ function DonutChart({ data }: { data: typeof channelData }) {
             </>
           ) : (
             <>
-              <Text className="text-xl font-bold text-gray-800">{total}</Text>
+              <Text className="text-xl font-bold text-gray-800">
+                {formatNumber(total)}
+              </Text>
               <Text className="text-xs text-gray-500">Tổng Lead</Text>
             </>
           )}
@@ -329,50 +334,239 @@ function DonutChart({ data }: { data: typeof channelData }) {
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
   const [compareType, setCompareType] = useState("month");
+  const [dataStat, setDataStat] = useState<
+    {
+      title: string;
+      value: any;
+      change: string;
+      isPositive: boolean;
+      icon: string;
+      color: "emerald" | "blue" | "purple" | "orange";
+    }[]
+  >([]);
+  const [dataCompare, setDataCompare] = useState<
+    {
+      title: string;
+      currentValue: string;
+      previousValue: string;
+      change: string;
+      isPositive: boolean;
+      icon: string;
+    }[]
+  >([
+    {
+      title: "Tổng Lead",
+      currentValue: "0",
+      previousValue: "0",
+      change: "+0%",
+      isPositive: true,
+      icon: "person-add-outline",
+    },
+    {
+      title: "Tổng REG",
+      currentValue: "0",
+      previousValue: "0",
+      change: "+0%",
+      isPositive: true,
+      icon: "document-text-outline",
+    },
+    {
+      title: "Tổng NE",
+      currentValue: "0",
+      previousValue: "0",
+      change: "+0%",
+      isPositive: true,
+      icon: "checkmark-circle-outline",
+    },
+    {
+      title: "REG Rate",
+      currentValue: "0%",
+      previousValue: "0%",
+      change: "-0%",
+      isPositive: true,
+      icon: "stats-chart-outline",
+    },
+  ]);
+  const [pieChartData, setPieChartData] = useState<
+    {
+      name: string;
+      value: number;
+      color: string;
+      percent: number;
+    }[]
+  >([]);
+  const year = dayjs().year();
+  const month = dayjs().month() + 1;
 
-  const getUsers = async () => {
+  const getLeadStat = async () => {
     try {
-      const data: any = await mainServices.getUsers();
-      console.log(data);
+      const data: any = await overviewServices.getOverviewStats({
+        period_type: "month",
+        year: year,
+        month: month,
+        compare: "both",
+        group_by: "tinh_trang_nhap_hoc",
+        date_column: "ngay_tao",
+      });
+      const stat = data?.data?.periods?.current?.by_group;
+      const stat_prev = data?.data?.periods?.previous?.by_group;
+
+      const Total = stat?.find((v: any) => v?.tinh_trang_nhap_hoc == "");
+      const Total_prev = stat_prev?.find(
+        (v: any) => v?.tinh_trang_nhap_hoc == "",
+      );
+      const REG = stat?.find((v: any) => v?.tinh_trang_nhap_hoc == "REG");
+      const REG_prev = stat_prev?.find(
+        (v: any) => v?.tinh_trang_nhap_hoc == "REG",
+      );
+      const NE = stat?.find((v: any) => v?.tinh_trang_nhap_hoc == "NE");
+      const pre_reg_rate = parseFloat(
+        ((REG_prev?.count / Total_prev?.count) * 100).toFixed(2),
+      );
+      const curr_reg_rate = parseFloat(
+        ((REG?.count / Total?.count) * 100).toFixed(2),
+      );
+
+      setDataStat([
+        {
+          title: "Tổng Lead",
+          value: formatNumber(Total?.count) ?? 0,
+          change: (Total?.change?.vs_previous?.percent ?? 0) + "%",
+          isPositive: (Total?.change?.vs_previous?.percent ?? 0) > 0,
+          icon: "person-add-outline",
+          color: "emerald",
+        },
+        {
+          title: "REG",
+          value: formatNumber(REG?.count) ?? 0,
+          change: (REG?.change?.vs_previous?.percent ?? 0) + "%",
+          isPositive: (REG?.change?.vs_previous?.percent ?? 0) > 0,
+          icon: "document-text-outline",
+          color: "blue",
+        },
+        {
+          title: "NE",
+          value: formatNumber(NE?.count) ?? 0,
+          change: (NE?.change?.vs_previous?.percent ?? 0) + "%",
+          isPositive: (NE?.change?.vs_previous?.percent ?? 0) > 0,
+          icon: "checkmark-circle-outline",
+          color: "purple",
+        },
+        {
+          title: "REG RATE",
+          value: curr_reg_rate.toFixed(2) + "%",
+          change:
+            curr_reg_rate < pre_reg_rate
+              ? ((1 - curr_reg_rate / pre_reg_rate) * 100).toFixed(2) + "%"
+              : ((1 - pre_reg_rate / curr_reg_rate) * 100).toFixed(2) + "%",
+          isPositive: curr_reg_rate > pre_reg_rate,
+          icon: "stats-chart-outline",
+          color: "orange",
+        },
+      ]);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const stats = [
-    {
-      title: "Tổng Lead",
-      value: "1,234",
-      change: "+12.5%",
-      isPositive: true,
-      icon: "person-add-outline",
-      color: "emerald",
-    },
-    {
-      title: "Tổng REG (200k)",
-      value: "856",
-      change: "+8.3%",
-      isPositive: true,
-      icon: "document-text-outline",
-      color: "blue",
-    },
-    {
-      title: "Tổng NE",
-      value: "642",
-      change: "+15.7%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-      color: "purple",
-    },
-    {
-      title: "REG Rate (%)",
-      value: "69.4%",
-      change: "-2.1%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-      color: "orange",
-    },
-  ];
+  const getLeadCompare = async (type: string) => {
+    try {
+      const data: any = await overviewServices.getOverviewStats({
+        period_type: type,
+        compare: "previous",
+        group_by: "tinh_trang_nhap_hoc",
+        date_column: "ngay_tao",
+      });
+      const stat = data?.data?.periods?.current?.by_group;
+      const stat_prev = data?.data?.periods?.previous?.by_group;
+
+      const Total = stat?.find((v: any) => v?.tinh_trang_nhap_hoc == "");
+      const Total_prev = stat_prev?.find(
+        (v: any) => v?.tinh_trang_nhap_hoc == "",
+      );
+      const REG = stat?.find((v: any) => v?.tinh_trang_nhap_hoc == "REG");
+      const REG_prev = stat_prev?.find(
+        (v: any) => v?.tinh_trang_nhap_hoc == "REG",
+      );
+      const NE = stat?.find((v: any) => v?.tinh_trang_nhap_hoc == "NE");
+      const NE_prev = stat_prev?.find(
+        (v: any) => v?.tinh_trang_nhap_hoc == "NE",
+      );
+      const pre_reg_rate = parseFloat(
+        ((REG_prev?.count / Total_prev?.count) * 100).toFixed(2),
+      );
+      const curr_reg_rate = parseFloat(
+        ((REG?.count / Total?.count) * 100).toFixed(2),
+      );
+
+      setDataCompare([
+        {
+          title: "Tổng Lead",
+          currentValue: Total?.count ?? 0,
+          previousValue: Total_prev?.count ?? 0,
+          change: (Total?.change?.vs_previous?.percent ?? 0) + "%",
+          isPositive: (Total?.change?.vs_previous?.percent ?? 0) > 0,
+          icon: "person-add-outline",
+        },
+        {
+          title: "Tổng REG",
+          currentValue: REG?.count ?? 0,
+          previousValue: REG_prev?.count ?? 0,
+          change: (REG?.change?.vs_previous?.percent ?? 0) + "%",
+          isPositive: (REG?.change?.vs_previous?.percent ?? 0) > 0,
+          icon: "document-text-outline",
+        },
+        {
+          title: "Tổng NE",
+          currentValue: NE?.count ?? 0,
+          previousValue: NE_prev?.count ?? 0,
+          change: (NE?.change?.vs_previous?.percent ?? 0) + "%",
+          isPositive: (NE?.change?.vs_previous?.percent ?? 0) > 0,
+          icon: "checkmark-circle-outline",
+        },
+        {
+          title: "REG Rate",
+          currentValue: curr_reg_rate.toFixed(2) + "%",
+          previousValue: pre_reg_rate.toFixed(2) + "%",
+          change:
+            curr_reg_rate < pre_reg_rate
+              ? ((1 - curr_reg_rate / pre_reg_rate) * 100).toFixed(2) + "%"
+              : ((1 - pre_reg_rate / curr_reg_rate) * 100).toFixed(2) + "%",
+          isPositive: curr_reg_rate > pre_reg_rate,
+          icon: "stats-chart-outline",
+        },
+      ]);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getPieChartData = async () => {
+    try {
+      const data: any = await overviewServices.getLeadPie({
+        period_type: "month",
+        limit: 1000,
+        group_by: "nguon_khach_hang",
+      });
+
+      setPieChartData(
+        data?.data?.data?.map((v: any, idx: number) => ({
+          name: v?.nguon_khach_hang,
+          value: v?.count,
+          color: ChartColors[idx + 1],
+          percent: v?.percent,
+        })) || [],
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getLeadStat();
+    getLeadCompare("month");
+    getPieChartData();
+  }, []);
 
   const periods = [
     { id: "today", label: "Hôm nay" },
@@ -386,7 +580,6 @@ export default function Dashboard() {
     { id: "week", label: "Tuần" },
     { id: "month", label: "Tháng" },
     { id: "quarter", label: "Quý" },
-    { id: "half", label: "6 tháng" },
     { id: "year", label: "Năm" },
   ];
 
@@ -399,7 +592,6 @@ export default function Dashboard() {
     year: { current: "Năm nay", previous: "Năm trước" },
   };
 
-  const comparisonData = comparisonDataMap[compareType];
   const currentLabel = compareLabels[compareType];
 
   return (
@@ -410,7 +602,7 @@ export default function Dashboard() {
       <ScrollView className="px-4 pt-4 pb-24">
         {/* Stats */}
         <View className="flex-row flex-wrap justify-between gap-4">
-          {stats.map((s, i) => (
+          {dataStat.map((s, i) => (
             <StatsCard key={i} {...s} />
           ))}
         </View>
@@ -418,7 +610,7 @@ export default function Dashboard() {
         {/* Chart Section */}
         <View className="bg-white rounded-2xl p-5 mt-6 shadow mb-6">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="font-bold text-gray-800" onPress={getUsers}>
+            <Text className="font-bold text-gray-800">
               Hiệu suất theo thời gian
             </Text>
 
@@ -459,11 +651,11 @@ export default function Dashboard() {
               So sánh cùng kỳ
             </Text>
 
-            <View className="flex-row items-center gap-1 px-2 py-1 bg-emerald-50 rounded-lg">
+            {/* <View className="flex-row items-center gap-1 px-2 py-1 bg-emerald-50 rounded-lg">
               <Text className="text-xs text-emerald-600 font-medium">
                 📅 Năm trước
               </Text>
-            </View>
+            </View> */}
           </View>
 
           {/* Compare Type Selector */}
@@ -476,7 +668,10 @@ export default function Dashboard() {
               {compareTypes.map((type) => (
                 <Pressable
                   key={type.id}
-                  onPress={() => setCompareType(type.id)}
+                  onPress={() => {
+                    getLeadCompare(type.id);
+                    setCompareType(type.id);
+                  }}
                   className={`px-3 py-1.5 rounded-full border ${
                     compareType === type.id
                       ? "bg-emerald-500 border-emerald-500"
@@ -497,14 +692,18 @@ export default function Dashboard() {
 
           {/* Comparison List */}
           <View className="gap-3">
-            {comparisonData.map((item, index) => (
+            {dataCompare.map((item, index: number) => (
               <View key={index} className="bg-gray-50 rounded-xl p-4">
                 {/* Top */}
                 <View className="flex-row items-center justify-between mb-3">
                   <View className="flex-row items-center gap-3">
                     <View className="w-10 h-10 items-center justify-center bg-white rounded-lg shadow-sm">
                       <Text className="text-lg text-emerald-600">
-                        <Ionicons name={item.icon} size={20} color="#059669" />
+                        <Ionicons
+                          name={item.icon as any}
+                          size={20}
+                          color="#059669"
+                        />
                       </Text>
                     </View>
 
@@ -540,7 +739,7 @@ export default function Dashboard() {
                       {currentLabel.current}
                     </Text>
                     <Text className="text-lg font-bold text-gray-800">
-                      {item.currentValue}
+                      {formatNumber(item.currentValue)}
                     </Text>
                   </View>
 
@@ -551,7 +750,7 @@ export default function Dashboard() {
                       {currentLabel.previous}
                     </Text>
                     <Text className="text-lg font-bold text-gray-600">
-                      {item.previousValue}
+                      {formatNumber(item.previousValue)}
                     </Text>
                   </View>
                 </View>
@@ -574,14 +773,14 @@ export default function Dashboard() {
             />
           </View>
 
-          <DonutChart data={channelData} />
+          <DonutChart data={pieChartData} />
 
           <View className="mt-6">
-            {channelData.map((ch, i) => (
+            {pieChartData.map((ch, i) => (
               <View key={i} className="flex-row items-center mb-3">
                 <View
-                  style={{ backgroundColor: ch.color }}
-                  className="w-3 h-3 rounded-full mr-2"
+                  style={{ backgroundColor: ch.color, borderRadius: 9999999 }}
+                  className="w-3 h-3 mr-2"
                 />
 
                 <Text className="flex-1 text-xs text-gray-700">{ch.name}</Text>

@@ -5,13 +5,6 @@ import { useState } from "react";
 import { Image, Modal, Pressable, Text, View } from "react-native";
 import NotificationPopover from "./Notification";
 
-const userInfo = {
-  name: "Nguyễn Minh Tuấn",
-  position: "Quản trị viên",
-  avatar:
-    "https://readdy.ai/api/search-image?query=professional%20Vietnamese%20male%20manager%20portrait%2C%20clean%20white%20background%2C%20business%20casual%2C%20confident%20smile%2C%20high%20quality%20headshot%20photo&width=80&height=80&seq=avatar001&orientation=squarish",
-};
-
 function AvatarMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -30,7 +23,7 @@ function AvatarMenu() {
         onPress={() => setOpen(true)}
         className="w-9 h-9 rounded-full overflow-hidden border-2 border-emerald-200"
       >
-        <Image source={{ uri: user.image }} className="w-full h-full" />
+        <Image source={{ uri: user?.avatar ?? "" }} className="w-full h-full" />
       </Pressable>
 
       {/* Modal menu */}
@@ -46,17 +39,15 @@ function AvatarMenu() {
           {/* User Info */}
           <View className="px-4 py-3 border-b border-gray-100 flex-row items-center gap-3">
             <Image
-              source={{ uri: user.image }}
+              source={{ uri: user?.avatar ?? "" }}
               className="w-10 h-10 rounded-full"
             />
 
             <View className="flex-1">
               <Text className="text-sm font-bold text-gray-800">
-                {user.firstName} {user.lastName}
+                {user?.name}
               </Text>
-              <Text className="text-xs text-emerald-600">
-                {userInfo.position}
-              </Text>
+              <Text className="text-xs text-emerald-600">{user?.role}</Text>
             </View>
           </View>
 

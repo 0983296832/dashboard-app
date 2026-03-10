@@ -20,8 +20,8 @@ export default function LoginScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("login");
   const { login } = useAuthStore();
   const router = useRouter();
-  const [email, setEmail] = useState("admin@tuyensinh.edu.vn");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("admin@example.com");
+  const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -38,24 +38,12 @@ export default function LoginScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  const fakeApi = async () => {
-    setLoading(true);
-
-    await new Promise((res) => setTimeout(res, 1500));
-
-    setLoading(false);
-  };
-
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const res = await authServices.login({
-        username: "emilys",
-        password: "emilyspass",
-        expiresInMins: 1, // optional, defaults to 60
-      });
-      console.log(res);
-      login(res?.data?.accessToken, res?.data?.refreshToken, {});
+      const res = await authServices.login({ email, password });
+
+      login(res?.data?.data?.token);
       router.replace("/overview");
       setLoading(false);
     } catch (error) {
@@ -74,8 +62,6 @@ export default function LoginScreen() {
 
   const handleRegister = async () => {
     if (form.password !== form.confirmPassword) return;
-
-    await fakeApi();
 
     setRegistered(true);
   };

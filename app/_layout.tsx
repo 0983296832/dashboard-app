@@ -16,14 +16,15 @@ const AppContent = () => {
   const getCurrentUser = async () => {
     try {
       const data: any = await mainServices.getCurrentUser();
-      setUser?.(data?.data);
+      setUser?.({
+        ...data?.data,
+        avatar:
+          "https://readdy.ai/api/search-image?query=professional%20Vietnamese%20male%20manager%20portrait%2C%20clean%20white%20background%2C%20business%20casual%2C%20confident%20smile%2C%20high%20quality%20headshot%20photo&width=80&height=80&seq=avatar001&orientation=squarish",
+      });
     } catch (error) {
       console.log(error);
     }
   };
-
-  console.log(isAuthenticated);
-  console.log(user);
 
   useEffect(() => {
     getCurrentUser();

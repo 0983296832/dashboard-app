@@ -4,7 +4,7 @@ import axios from "axios";
 const authServices = {
   login: async (body: any) => {
     try {
-      const url = getBaseUrl() + "/auth/login";
+      const url = getBaseUrl() + "/login";
       const response = await axios.post(url, body, {
         withCredentials: true,
       });

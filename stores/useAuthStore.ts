@@ -16,13 +16,27 @@ const secureStorage = {
 
 interface AuthState {
   accessToken: string | null;
-  refreshToken: string | null;
-  user: any | null;
+
+  user: {
+    co_so: null | string;
+    email: string;
+    id: number;
+    name: string;
+    role: string;
+    avatar: string;
+  } | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setTokens: (accessToken: string, refreshToken: string) => void;
-  setUser: (user: any) => void;
-  login: (accessToken: string, refreshToken: string, user: any) => void;
+  setTokens: (accessToken: string) => void;
+  setUser: (user: {
+    co_so: null | string;
+    email: string;
+    id: number;
+    name: string;
+    role: string;
+    avatar: string;
+  }) => void;
+  login: (accessToken: string) => void;
   logout: () => void;
 }
 
@@ -36,20 +50,19 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: false,
         isLoading: true,
 
-        setTokens: (accessToken, refreshToken) =>
+        setTokens: (accessToken) =>
           set({
             accessToken,
-            refreshToken,
+
             isAuthenticated: !!accessToken,
           }),
 
         setUser: (user) => set({ user }),
 
-        login: (accessToken, refreshToken, user) =>
+        login: (accessToken) =>
           set({
             accessToken,
-            refreshToken,
-            // user,
+
             isAuthenticated: true,
             isLoading: false,
           }),
@@ -57,8 +70,14 @@ export const useAuthStore = create<AuthState>()(
         logout: () =>
           set({
             accessToken: null,
-            refreshToken: null,
-            // user: null,
+            user: {
+              co_so: null,
+              email: "",
+              id: 0,
+              name: "",
+              role: "",
+              avatar: "",
+            },
             isAuthenticated: false,
             isLoading: false,
           }),
