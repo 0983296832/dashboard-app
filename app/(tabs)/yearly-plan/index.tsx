@@ -36,6 +36,27 @@ export default function KPIPage() {
   return (
     <View className="flex-1 bg-gray-50 pb-20">
       <ScrollView className="px-3 py-4">
+        <Pressable
+          onPress={() => router.push("/kpi-config")}
+          className="w-full flex-row items-center justify-between px-4 py-3 bg-white rounded-xl border border-orange-100"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-9 h-9 items-center justify-center bg-orange-50 rounded-xl">
+              <Ionicons name="settings-outline" size={20} color="#f97316" />
+            </View>
+
+            <View>
+              <Text className="text-sm font-semibold text-gray-800">
+                Cấu hình KPI Target
+              </Text>
+              <Text className="text-xs text-gray-400">
+                Thêm, sửa, xoá chỉ tiêu theo kỳ
+              </Text>
+            </View>
+          </View>
+
+          <Ionicons name="chevron-forward-outline" size={22} color="#9ca3af" />
+        </Pressable>
         {/* ===== TỔNG QUAN ===== */}
 
         <View className="bg-white rounded-xl overflow-hidden mb-4">

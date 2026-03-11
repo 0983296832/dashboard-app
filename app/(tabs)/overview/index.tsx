@@ -4,6 +4,7 @@ import { formatNumber } from "@/lib/numberHelper";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -395,6 +396,9 @@ export default function Dashboard() {
       percent: number;
     }[]
   >([]);
+  const MAX_ITEM = 5;
+
+  const [showAll, setShowAll] = useState(false);
   const year = dayjs().year();
   const month = dayjs().month() + 1;
 
@@ -776,20 +780,32 @@ export default function Dashboard() {
           <DonutChart data={pieChartData} />
 
           <View className="mt-6">
-            {pieChartData.map((ch, i) => (
-              <View key={i} className="flex-row items-center mb-3">
-                <View
-                  style={{ backgroundColor: ch.color, borderRadius: 9999999 }}
-                  className="w-3 h-3 mr-2"
-                />
+            {(showAll ? pieChartData : pieChartData.slice(0, MAX_ITEM)).map(
+              (ch, i) => (
+                <View key={i} className="flex-row items-center mb-3">
+                  <View
+                    style={{ backgroundColor: ch.color, borderRadius: 9999999 }}
+                    className="w-3 h-3 mr-2"
+                  />
 
-                <Text className="flex-1 text-xs text-gray-700">{ch.name}</Text>
+                  <Text className="flex-1 text-xs text-gray-700">
+                    {ch.name}
+                  </Text>
 
-                <Text className="text-xs font-bold text-gray-600">
-                  {ch.percent}%
+                  <Text className="text-xs font-bold text-gray-600">
+                    ({ch?.value} lead) {ch.percent}%
+                  </Text>
+                </View>
+              ),
+            )}
+
+            {pieChartData.length > MAX_ITEM && (
+              <Pressable onPress={() => setShowAll(!showAll)}>
+                <Text className="text-xs text-blue-500 mt-2 mx-auto">
+                  {showAll ? "Thu gọn" : "Xem thêm"}
                 </Text>
-              </View>
-            ))}
+              </Pressable>
+            )}
           </View>
         </View>
         <View className="bg-white rounded-2xl shadow-md p-5 mb-28">
@@ -799,7 +815,11 @@ export default function Dashboard() {
               Cảnh báo gần đây
             </Text>
 
-            <Pressable onPress={() => {}}>
+            <Pressable
+              onPress={() => {
+                router.push("/alerts");
+              }}
+            >
               <Text className="text-xs text-emerald-600 font-medium">
                 Xem tất cả
               </Text>
