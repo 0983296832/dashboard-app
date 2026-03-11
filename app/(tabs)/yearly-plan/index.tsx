@@ -1,23 +1,86 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
-import { facilitiesKPITable, yearlyKPI } from "../../../mocks/kpi";
+import kpiServices from "@/api/kpi";
+import { formatNumber } from "@/lib/numberHelper";
+import { yearlyKPI } from "../../../mocks/kpi";
+
+type Period = "week" | "month" | "quarter" | "year";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "week", label: "Tuần" },
+  { key: "month", label: "Tháng" },
+  { key: "quarter", label: "Quý" },
+  { key: "year", label: "Năm" },
+];
+
+interface PeriodFilterProps {
+  value: Period;
+  onChange: (p: Period) => void;
+}
+
+function PeriodFilter({ value, onChange }: PeriodFilterProps) {
+  return (
+    <View className="flex-row gap-1">
+      {PERIODS.map((p) => {
+        const active = value === p.key;
+
+        return (
+          <Pressable
+            key={p.key}
+            onPress={() => onChange(p.key)}
+            className={`px-2 py-0.5 rounded-full ${
+              active ? "bg-orange-500" : "bg-gray-100 active:bg-gray-200"
+            }`}
+          >
+            <Text
+              className={`text-[10px] font-semibold ${
+                active ? "text-white" : "text-gray-500"
+              }`}
+            >
+              {p.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function KPIPage() {
   const router = useRouter();
-
+  const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<
     "pctReg" | "pctNb" | "pctNe" | "reg" | "nb" | "ne"
   >("pctReg");
-
-  const sortedFacilities = [...facilitiesKPITable].sort((a, b) => {
-    const av = (a as any)[sortField] ?? -1;
-    const bv = (b as any)[sortField] ?? -1;
-    return (bv as number) - (av as number);
+  const [facilityPeriod, setFacilityPeriod] = useState<Period>("month");
+  const [kpiYear, setKpiYear] = useState<{
+    soLead: number;
+    reg: {
+      achieved: number;
+      target: number;
+      percent: number;
+    };
+    nb: {
+      achieved: number;
+      target: number;
+      percent: number;
+    };
+    ne: {
+      achieved: number;
+      target: number;
+      percent: number;
+    };
+  }>({
+    soLead: 0,
+    reg: { achieved: 0, target: 0, percent: 0 },
+    nb: { achieved: 0, target: 0, percent: 0 },
+    ne: { achieved: 0, target: 0, percent: 0 },
   });
+  const [facilitiesKPITable, setFacilitiesKPITable] = useState<any>([]);
 
   const pctColor = (v: number | null) => {
     if (v === null || v === 0) return "text-red-500";
@@ -32,6 +95,59 @@ export default function KPIPage() {
     if (v >= 15) return "bg-amber-50";
     return "bg-red-50";
   };
+
+  const getLeadKpis = async () => {
+    try {
+      setLoading(true);
+      const { data } = await kpiServices.getLeadKpi({
+        period_type: facilityPeriod,
+        group_by: "co_so",
+        status_values: ["REG", "NB", "NE"].join(","),
+        date_column: "ngay_tao",
+      });
+      const reg_val = data?.totals?.criteria_breakdown?.find(
+        (v: any) => v?.filter_value == "REG",
+      );
+      const nb_val = data?.totals?.criteria_breakdown?.find(
+        (v: any) => v?.filter_value == "NB",
+      );
+      const ne_val = data?.totals?.criteria_breakdown?.find(
+        (v: any) => v?.filter_value == "NE",
+      );
+      console.log(data);
+      setKpiYear({
+        soLead: data?.totals?.total_lead,
+        reg: {
+          achieved: reg_val?.actual,
+          target: reg_val?.target,
+          percent: reg_val?.percent,
+        },
+        nb: {
+          achieved: nb_val?.actual,
+          target: nb_val?.target,
+          percent: nb_val?.percent,
+        },
+        ne: {
+          achieved: ne_val?.actual,
+          target: ne_val?.target,
+          percent: ne_val?.percent,
+        },
+      });
+      setFacilitiesKPITable(
+        data?.by_group?.map((v: any, index: number) => ({
+          id: index + 1,
+          ...v,
+        })),
+      );
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getLeadKpis();
+  }, [facilityPeriod]);
 
   return (
     <View className="flex-1 bg-gray-50 pb-20">
@@ -60,16 +176,17 @@ export default function KPIPage() {
         {/* ===== TỔNG QUAN ===== */}
 
         <View className="bg-white rounded-xl overflow-hidden mb-4">
-          <View className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+          <View className="flex-row justify-between items-center px-4 py-2 bg-gray-50 border-b border-gray-100">
             <Text className="text-xs font-bold text-gray-500 uppercase">
               Tổng Quan Kế Hoạch Năm
             </Text>
+            <PeriodFilter value={facilityPeriod} onChange={setFacilityPeriod} />
           </View>
 
           <View className="p-4 border-b border-gray-100">
             <Text className="text-xs text-gray-400">Số Lead</Text>
             <Text className="text-3xl font-bold text-gray-900">
-              {yearlyKPI.soLead.toLocaleString("vi-VN")}
+              {kpiYear?.soLead.toLocaleString("vi-VN")}
             </Text>
           </View>
           <View className="flex flex-row">
@@ -78,26 +195,26 @@ export default function KPIPage() {
             <View className="p-4 border-b border-gray-100 flex-1">
               <Text className="text-xs text-gray-400">KPI REG</Text>
               <Text className="text-2xl font-bold text-gray-900">
-                {yearlyKPI.reg.target.toLocaleString("vi-VN")}
+                {kpiYear?.reg.target.toLocaleString("vi-VN")}
               </Text>
 
               <View className="flex-row justify-between items-end mt-2">
                 <View>
                   <Text className="text-xs text-gray-400">REG</Text>
                   <Text className="text-lg font-bold text-gray-700">
-                    {yearlyKPI.reg.achieved.toLocaleString("vi-VN")}
+                    {kpiYear?.reg.achieved.toLocaleString("vi-VN")}
                   </Text>
                 </View>
 
                 <Text className="text-xl font-bold text-orange-500">
-                  {yearlyKPI.reg.percent}%
+                  {kpiYear?.reg.percent}%
                 </Text>
               </View>
 
               <View className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <View
                   className="h-full bg-orange-400"
-                  style={{ width: `${Math.min(yearlyKPI.reg.percent, 100)}%` }}
+                  style={{ width: `${Math.min(kpiYear?.reg.percent, 100)}%` }}
                 />
               </View>
             </View>
@@ -107,26 +224,26 @@ export default function KPIPage() {
             <View className="p-4 border-b border-gray-100 flex-1">
               <Text className="text-xs text-gray-400">KPI NB</Text>
               <Text className="text-2xl font-bold text-gray-900">
-                {yearlyKPI.nb.target.toLocaleString("vi-VN")}
+                {kpiYear?.nb.target.toLocaleString("vi-VN")}
               </Text>
 
               <View className="flex-row justify-between items-end mt-2">
                 <View>
                   <Text className="text-xs text-gray-400">NB</Text>
                   <Text className="text-lg font-bold text-gray-700">
-                    {yearlyKPI.nb.achieved.toLocaleString("vi-VN")}
+                    {kpiYear?.nb.achieved.toLocaleString("vi-VN")}
                   </Text>
                 </View>
 
                 <Text className="text-xl font-bold text-orange-500">
-                  {yearlyKPI.nb.percent}%
+                  {kpiYear?.nb.percent}%
                 </Text>
               </View>
 
               <View className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <View
                   className="h-full bg-orange-400"
-                  style={{ width: `${Math.min(yearlyKPI.nb.percent, 100)}%` }}
+                  style={{ width: `${Math.min(kpiYear?.nb.percent, 100)}%` }}
                 />
               </View>
             </View>
@@ -137,26 +254,26 @@ export default function KPIPage() {
           <View className="p-4">
             <Text className="text-xs text-gray-400">KPI NE</Text>
             <Text className="text-2xl font-bold text-gray-900">
-              {yearlyKPI.ne.target.toLocaleString("vi-VN")}
+              {kpiYear?.ne.target.toLocaleString("vi-VN")}
             </Text>
 
             <View className="flex-row justify-between items-end mt-2">
               <View>
                 <Text className="text-xs text-gray-400">Thực tế</Text>
                 <Text className="text-lg font-bold text-gray-700">
-                  {yearlyKPI.ne.achieved.toLocaleString("vi-VN")}
+                  {kpiYear?.ne.achieved.toLocaleString("vi-VN")}
                 </Text>
               </View>
 
               <Text className="text-xl font-bold text-orange-500">
-                {yearlyKPI.ne.percent}%
+                {kpiYear?.ne.percent}%
               </Text>
             </View>
 
             <View className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <View
                 className="h-full bg-orange-400"
-                style={{ width: `${Math.min(yearlyKPI.ne.percent, 100)}%` }}
+                style={{ width: `${Math.min(kpiYear?.ne.percent, 100)}%` }}
               />
             </View>
           </View>
@@ -169,58 +286,50 @@ export default function KPIPage() {
             <Text className="text-xs font-bold text-gray-500 uppercase">
               Chi Tiết Theo Cơ Sở
             </Text>
-
-            <View className="flex-row gap-x-1">
-              {(["pctReg", "pctNb", "pctNe"] as const).map((f) => (
-                <Pressable
-                  key={f}
-                  onPress={() => setSortField(f)}
-                  className={`px-2 py-1 rounded-full ${
-                    sortField === f ? "bg-orange-500" : "bg-gray-100"
-                  }`}
-                >
-                  <Text
-                    className={`text-[10px] font-semibold ${
-                      sortField === f ? "text-white" : "text-gray-500"
-                    }`}
-                  >
-                    {f === "pctReg" ? "% REG" : f === "pctNb" ? "% NB" : "% NE"}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
           </View>
 
-          {sortedFacilities.map((f, idx) => {
-            const isExpanded = expandedId === f.id;
-            const pct = f[sortField] as number | null;
-
+          {facilitiesKPITable.map((f: any, idx: number) => {
+            const isExpanded = expandedId === f?.id;
+            const reg_val = f?.criteria_breakdown?.find(
+              (v: { filter_value: string }) => v?.filter_value == "REG",
+            );
+            const nb_val = f?.criteria_breakdown?.find(
+              (v: { filter_value: string }) => v?.filter_value == "NB",
+            );
+            const ne_val = f?.criteria_breakdown?.find(
+              (v: { filter_value: string }) => v?.filter_value == "NE",
+            );
             return (
-              <View key={f.id}>
+              <View key={idx}>
                 <Pressable
                   className="flex-row items-center px-4 py-3"
-                  onPress={() => setExpandedId(isExpanded ? null : f.id)}
+                  onPress={() => setExpandedId(isExpanded ? null : f?.id)}
                 >
                   <Text className="text-xs text-gray-400 w-5">{idx + 1}.</Text>
 
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-gray-800">
-                      {f.name}
+                      {f?.co_so}
                     </Text>
 
                     <View className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <View
                         className="h-full bg-orange-400"
                         style={{
-                          width: `${Math.min(Math.max(pct ?? 0, 0), 100)}%`,
+                          width: `${Math.min(
+                            Math.max(f?.total_kpi_percent ?? 0, 0),
+                            100,
+                          )}%`,
                         }}
                       />
                     </View>
                   </View>
 
-                  <View className={`ml-2 px-2 py-1 rounded-lg ${pctBg(pct)}`}>
-                    <Text className={`text-sm font-bold ${pctColor(pct)}`}>
-                      {pct !== null ? `${pct}%` : "—"}
+                  <View className={`ml-2 px-2 py-1 rounded-lg bg-amber-50`}>
+                    <Text className={`text-sm font-bold text-amber-600`}>
+                      {f?.total_kpi_percent !== null
+                        ? `${f?.total_kpi_percent}%`
+                        : "—"}
                     </Text>
                   </View>
 
@@ -245,28 +354,28 @@ export default function KPIPage() {
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">Lead</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.soLead.toLocaleString("vi-VN")}
+                              {formatNumber(f?.total_lead)}
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">REG</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.reg.toLocaleString("vi-VN")}
+                              {formatNumber(reg_val?.actual)}
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">NB</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.nb.toLocaleString("vi-VN")}
+                              {formatNumber(nb_val?.actual)}
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">NE</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.ne.toLocaleString("vi-VN")}
+                              {formatNumber(ne_val?.actual)}
                             </Text>
                           </View>
                         </View>
@@ -282,23 +391,21 @@ export default function KPIPage() {
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">REG</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.kpiReg.toLocaleString("vi-VN")}
+                              {formatNumber(reg_val?.target)}
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">NB</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.kpiNb > 0
-                                ? f.kpiNb.toLocaleString("vi-VN")
-                                : "—"}
+                              {formatNumber(nb_val?.target)}
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">NE</Text>
                             <Text className="text-xs font-bold text-gray-800">
-                              {f.kpiNe.toLocaleString("vi-VN")}
+                              {formatNumber(ne_val?.target)}
                             </Text>
                           </View>
                         </View>
@@ -314,26 +421,27 @@ export default function KPIPage() {
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">REG</Text>
                             <Text
-                              className={`text-xs font-bold ${pctColor(f.pctReg)}`}
+                              className={`text-xs font-bold text-amber-600`}
                             >
-                              {f.pctReg}%
+                              {formatNumber(reg_val?.percent)}%
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
                             <Text className="text-xs text-gray-500">NB</Text>
                             <Text
-                              className={`text-xs font-bold ${pctColor(f.pctNb)}`}
+                              className={`text-xs font-bold text-amber-600`}
                             >
-                              {f.pctNb !== null ? `${f.pctNb}%` : "—"}
+                              {formatNumber(nb_val?.percent)}%
                             </Text>
                           </View>
 
                           <View className="flex-row justify-between items-center">
+                            <Text className="text-xs text-gray-500">NE</Text>
                             <Text
-                              className={`text-xs font-bold ${pctColor(f.pctNe)}`}
+                              className={`text-xs font-bold text-amber-600`}
                             >
-                              {f.pctNe}%
+                              {formatNumber(ne_val?.percent)}%
                             </Text>
                           </View>
                         </View>
@@ -343,7 +451,7 @@ export default function KPIPage() {
                     {/* Button */}
 
                     <Pressable
-                      onPress={() => router.push(`/facility-detail/${f.id}`)}
+                      onPress={() => router.push(`/facility-detail/${f?.id}`)}
                       className="w-full py-2 bg-orange-500 rounded-xl flex-row justify-center items-center"
                     >
                       <Text className="text-xs font-semibold text-white mr-1">

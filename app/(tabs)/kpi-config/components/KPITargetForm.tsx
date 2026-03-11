@@ -1,8 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import kpiServices from "@/api/kpi";
+import SelectCustom from "@/components/select-custom";
 import SelectInput from "@/components/select-input";
 import { KPITarget } from "../../../../mocks/kpi-targets";
 
@@ -14,17 +13,15 @@ interface KPITargetFormProps {
 
 const FIELD_OPTIONS = [
   { value: "tinh_trang_nhap_hoc", label: "tinh_trang_nhap_hoc" },
-  { value: "trang_thai", label: "trang_thai" },
-  { value: "loai_khach", label: "loai_khach" },
+  // { value: "trang_thai", label: "trang_thai" },
+  // { value: "loai_khach", label: "loai_khach" },
 ];
-
-const FILTER_VALUE_OPTIONS = ["REG", "NB", "NE", "LEAD", "CANCEL"];
 
 const DATE_COLUMN_OPTIONS = [
   "ngay_tao",
-  "ngay_cap_nhat",
-  "ngay_nhap_hoc",
-  "ngay_dang_ky",
+  // "ngay_cap_nhat",
+  // "ngay_nhap_hoc",
+  // "ngay_dang_ky",
 ];
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -40,19 +37,15 @@ export default function KPITargetForm({
     name: "",
     field: "tinh_trang_nhap_hoc",
     filter_value: "REG",
-    target: 1000,
+    target: 100,
     period_type: "month",
     year: 2026,
     month: 1,
     quarter: undefined,
     date_column: "ngay_tao",
   });
-  
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showJson, setShowJson] = useState(false);
-  
 
- 
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (initial) {
@@ -108,22 +101,6 @@ export default function KPITargetForm({
     onSave(initial ? { ...payload, id: initial.id } : payload);
   };
 
-  const jsonPreview = JSON.stringify(
-    {
-      field: form.field,
-      filter_value: form.filter_value,
-      target: form.target,
-      period_type: form.period_type,
-      year: form.year,
-      ...(form.period_type === "month" ? { month: form.month } : {}),
-      ...(form.period_type === "quarter" ? { quarter: form.quarter } : {}),
-      date_column: form.date_column,
-      name: form.name,
-    },
-    null,
-    2,
-  );
-
   return (
     <ScrollView className="">
       {/* NAME */}
@@ -156,7 +133,7 @@ export default function KPITargetForm({
             Field *
           </Text>
 
-          <View className="border border-gray-200 rounded-lg bg-gray-50">
+          <View className=" rounded-lg bg-gray-50">
             <SelectInput
               value={form.field}
               onChange={(v) => set("field", v)}
@@ -170,16 +147,10 @@ export default function KPITargetForm({
           <Text className="text-xs font-semibold text-gray-600 mb-1">
             Filter value *
           </Text>
-
-          <TextInput
+          <SelectCustom
+            type="tinh_trang_nhap_hoc"
             value={form.filter_value}
-            onChangeText={(v) => set("filter_value", v.toUpperCase())}
-            placeholder="REG / NB / NE"
-            className={`px-3 py-2 text-sm rounded-lg border ${
-              errors.filter_value
-                ? "border-red-400 bg-red-50"
-                : "border-gray-200 bg-gray-50"
-            }`}
+            onChange={(v) => set("filter_value", v)}
           />
 
           {errors.filter_value && (
@@ -245,7 +216,7 @@ export default function KPITargetForm({
             Năm *
           </Text>
 
-          <View className="border border-gray-200 rounded-lg bg-gray-50">
+          <View className=" rounded-lg bg-gray-50">
             <SelectInput
               value={form.year}
               onChange={(v) => set("year", v)}
@@ -263,7 +234,7 @@ export default function KPITargetForm({
               Tháng *
             </Text>
 
-            <View className="border border-gray-200 rounded-lg bg-gray-50">
+            <View className=" rounded-lg bg-gray-50">
               <SelectInput
                 value={form.month}
                 onChange={(v) => set("month", v)}
@@ -282,7 +253,7 @@ export default function KPITargetForm({
               Quý *
             </Text>
 
-            <View className="border border-gray-200 rounded-lg bg-gray-50">
+            <View className=" rounded-lg bg-gray-50">
               <SelectInput
                 value={form.quarter}
                 onChange={(v) => set("quarter", v)}
@@ -302,7 +273,7 @@ export default function KPITargetForm({
           Date column
         </Text>
 
-        <View className="border border-gray-200 rounded-lg bg-gray-50">
+        <View className=" rounded-lg bg-gray-50">
           <SelectInput
             value={form.date_column}
             onChange={(v) => set("date_column", v)}
@@ -314,28 +285,11 @@ export default function KPITargetForm({
         </View>
       </View>
 
-      {/* JSON */}
-      <Pressable
-        onPress={() => setShowJson((v) => !v)}
-        className="flex-row items-center gap-1.5"
-      >
-        <Ionicons name="code-slash-outline" size={14} color="#6b7280" />
-        <Text className="text-xs text-gray-500">
-          {showJson ? "Ẩn JSON" : "Xem JSON preview"}
-        </Text>
-      </Pressable>
-
-      {showJson && (
-        <ScrollView className="mt-2 p-3 bg-gray-900 rounded-xl max-h-40">
-          <Text className="text-emerald-400 text-xs">{jsonPreview}</Text>
-        </ScrollView>
-      )}
-
       {/* ACTIONS */}
       <View className="flex-row gap-2 pt-2">
         <Pressable
           onPress={onCancel}
-          className="flex-1 py-2.5 rounded-xl border border-gray-200 items-center"
+          className="flex-1 py-2.5 rounded-xl  items-center"
         >
           <Text className="text-sm font-semibold text-gray-600">Huỷ</Text>
         </Pressable>

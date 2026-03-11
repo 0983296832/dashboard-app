@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Clipboard from "expo-clipboard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -11,6 +10,9 @@ import {
 } from "react-native";
 
 import kpiServices from "@/api/kpi";
+import { formatNumber } from "@/lib/numberHelper";
+import { useToastStore } from "@/stores/useToastStore";
+import dayjs from "dayjs";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   kpiTargets as initialTargets,
@@ -35,9 +37,9 @@ const PERIOD_LABEL: Record<string, string> = {
 };
 
 function periodLabel(t: KPITarget) {
-  if (t.period_type === "month") return `T${t.month}/${t.year}`;
-  if (t.period_type === "quarter") return `Q${t.quarter}/${t.year}`;
-  return `${t.year}`;
+  if (t?.period_type === "month") return `T${t?.month}/${t?.year}`;
+  if (t?.period_type === "quarter") return `Q${t?.quarter}/${t?.year}`;
+  return `${t?.year}`;
 }
 
 export default function KPIConfigPage() {
@@ -47,36 +49,53 @@ export default function KPIConfigPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<KPITarget | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showJsonExport, setShowJsonExport] = useState(false);
-
-  const filtered = targets.filter((t) => {
-    const matchFilter = filter === "all" || t.period_type === filter;
+  const showToast = useToastStore((s) => s.showToast);
+  const filtered = targets?.filter((t) => {
+    const matchFilter = filter === "all" || t?.period_type === filter;
 
     const matchSearch =
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.filter_value.toLowerCase().includes(search.toLowerCase());
+      t?.name?.toLowerCase().includes(search?.toLowerCase()) ||
+      t?.filter_value?.toLowerCase().includes(search?.toLowerCase());
 
     return matchFilter && matchSearch;
   });
 
-  const handleSave = async (data: Omit<KPITarget, "id"> & { id?: string }) => {
-    if (data.id) {
-      setTargets((prev) =>
-        prev.map((t) => (t.id === data.id ? { ...data, id: data.id! } : t)),
-      );
-    } else {
-      const res = await kpiServices.postKpiTarget(data);
-      console.log(res);
-    }
+  const getListTarget = async () => {
+    try {
+      const res = await kpiServices.getKpiTargets({
+        year: dayjs().year(),
+      });
 
-    setShowForm(false);
-    setEditing(null);
+      setTargets(res?.data);
+    } catch (error) {}
   };
 
-  const handleDelete = (id: string) => {
-    setTargets((prev) => prev.filter((t) => t.id !== id));
-    setDeleteId(null);
-    showToast("Đã xoá KPI target", "error");
+  const handleSave = async (data: Omit<KPITarget, "id"> & { id?: string }) => {
+    try {
+      if (data.id) {
+        await kpiServices.putKpiTarget(data.id, data);
+        getListTarget();
+        showToast("Cập nhật chỉ tiêu thành công", "success");
+      } else {
+        await kpiServices.postKpiTarget(data);
+        getListTarget();
+        showToast("Tạo chỉ tiêu thành công", "success");
+      }
+
+      setShowForm(false);
+      setEditing(null);
+    } catch (error) {
+      showToast("Thao tác thất bại", "error");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await kpiServices.deleteKpiTarget(deleteId as string | null);
+      setTargets((prev) => prev?.filter((t) => t?.id != id));
+      setDeleteId(null);
+      showToast("Đã xoá KPI target", "success");
+    } catch (error) {}
   };
 
   const handleEdit = (t: KPITarget) => {
@@ -90,7 +109,7 @@ export default function KPIConfigPage() {
   };
 
   const jsonExport = JSON.stringify(
-    targets.map(
+    targets?.map(
       ({
         id: _id,
         name,
@@ -118,65 +137,13 @@ export default function KPIConfigPage() {
     2,
   );
 
-  const totalTargets = targets.length;
-  const totalTarget = targets.reduce((s, t) => s + t.target, 0);
-  const regCount = targets.filter((t) => t.filter_value === "REG").length;
-  const nbCount = targets.filter((t) => t.filter_value === "NB").length;
+  useEffect(() => {
+    getListTarget();
+  }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50 pb-20">
       <ScrollView className="px-3 py-4">
-        {/* Summary */}
-        <View className="flex-row flex-wrap justify-between gap-1 mb-4">
-          {[
-            {
-              label: "Tổng targets",
-              value: totalTargets,
-              icon: "flag-outline",
-              color: "text-orange-500",
-              bg: "bg-orange-50",
-            },
-            {
-              label: "Tổng chỉ tiêu",
-              value: totalTarget.toLocaleString("vi-VN"),
-              icon: "bar-chart-outline",
-              color: "text-emerald-600",
-              bg: "bg-emerald-50",
-            },
-            {
-              label: "REG targets",
-              value: regCount,
-              icon: "person-add-outline",
-              color: "text-amber-600",
-              bg: "bg-amber-50",
-            },
-            {
-              label: "NB targets",
-              value: nbCount,
-              icon: "star-outline",
-              color: "text-gray-600",
-              bg: "bg-gray-100",
-            },
-          ].map((c) => (
-            <View
-              key={c.label}
-              className="w-[24%] bg-white rounded-xl p-3 items-center"
-            >
-              <View
-                className={`w-8 h-8 items-center justify-center rounded-full mb-1.5 ${c.bg}`}
-              >
-                <Ionicons name={c.icon as any} size={16} />
-              </View>
-
-              <Text className={`text-lg font-bold ${c.color}`}>{c.value}</Text>
-
-              <Text className="text-[10px] text-gray-400 mt-0.5 text-center">
-                {c.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-
         {/* Search */}
         <View className="flex-row gap-2 mb-4">
           <View className="flex-1 relative">
@@ -194,18 +161,11 @@ export default function KPIConfigPage() {
           >
             <Ionicons name="add" size={18} color="white" />
           </Pressable>
-
-          <Pressable
-            onPress={() => setShowJsonExport((v) => !v)}
-            className="px-3 py-2 bg-gray-800 rounded-xl items-center justify-center"
-          >
-            <Ionicons name="code-slash-outline" size={18} color="white" />
-          </Pressable>
         </View>
 
         {/* Filter */}
         <View className="flex-row gap-1.5 bg-gray-100 p-1 rounded-xl">
-          {(["all", "month", "quarter", "year"] as FilterType[]).map((f) => (
+          {(["all", "month", "quarter", "year"] as FilterType[])?.map((f) => (
             <Pressable
               key={f}
               onPress={() => setFilter(f)}
@@ -224,65 +184,49 @@ export default function KPIConfigPage() {
           ))}
         </View>
 
-        {/* JSON Export */}
-        {showJsonExport && (
-          <View className="bg-gray-900 rounded-xl overflow-hidden ">
-            <View className="flex-row justify-between px-4 py-2.5 border-b border-gray-700">
-              <Text className="text-xs text-gray-300">
-                JSON Export ({targets.length} targets)
-              </Text>
-
-              <Pressable
-                onPress={async () => {
-                  await Clipboard.setStringAsync(jsonExport);
-                  showToast("Đã copy JSON");
-                }}
-              >
-                <Text className="text-xs text-emerald-400">Copy</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView className="p-4 max-h-64">
-              <Text className="text-emerald-400 text-xs">{jsonExport}</Text>
-            </ScrollView>
-          </View>
-        )}
-
         {/* List */}
         <View className="bg-white rounded-xl  overflow-hidden">
           <View className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex-row justify-between">
             <Text className="text-xs font-bold text-gray-500">
               Danh sách KPI Target
             </Text>
-            <Text className="text-xs text-gray-400">{filtered.length} mục</Text>
+            <Text className="text-xs text-gray-400">
+              {filtered?.length} mục
+            </Text>
           </View>
 
-          {filtered.map((t) => (
+          {filtered?.map((t) => (
             <View
-              key={t.id}
+              key={t?.id}
               className="px-4 py-3 flex-row items-center gap-3 border-b border-gray-100"
             >
               <View
-                className={`w-10 h-10 items-center justify-center rounded-xl ${
-                  FILTER_VALUE_COLORS[t.filter_value]
-                }`}
+                className={`w-14 h-14 items-center justify-center line-clamp-2   bg-orange-100 text-orange-600`}
+                style={{ borderRadius: 12 }}
               >
-                <Text className="font-bold text-xs">{t.filter_value}</Text>
+                <Text className="font-bold text-xs">{t?.filter_value}</Text>
               </View>
 
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-gray-800">
-                  {t.name}
+                  {t?.name}
                 </Text>
-
-                <Text className="text-xs text-gray-400 mt-0.5">
-                  {periodLabel(t)} · {t.field} · {t.date_column}
-                </Text>
+                <View className="flex flex-row">
+                  <Ionicons
+                    name="calendar-outline"
+                    size={14}
+                    color="#9CA3AF"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text className="text-xs text-gray-400 mt-0.5">
+                    {periodLabel(t)} · {t?.field} · {t?.date_column}
+                  </Text>
+                </View>
               </View>
 
               <View className="items-end">
                 <Text className="text-base font-bold text-orange-500">
-                  {t.target.toLocaleString("vi-VN")}
+                  {formatNumber(t?.target)}
                 </Text>
 
                 <Text className="text-[10px] text-gray-400">target</Text>
@@ -297,7 +241,7 @@ export default function KPIConfigPage() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setDeleteId(t.id)}
+                  onPress={() => setDeleteId(t?.id)}
                   className="w-8 h-8 items-center justify-center"
                 >
                   <Ionicons name="trash-outline" size={18} color="#ef4444" />
@@ -350,7 +294,7 @@ export default function KPIConfigPage() {
             </Text>
 
             <Text className="text-sm text-gray-500 text-center mb-5">
-              Hành động này không thể hoàn tác.
+              Hành động này không thể hoàn tác?.
             </Text>
 
             <View className="flex-row gap-3">

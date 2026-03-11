@@ -15,7 +15,8 @@ const authServices = {
     }
   },
   register: (body: any) => {
-    const url = getBaseUrl() + "auth/register";
+    const url = getBaseUrl() + "/register";
+    console.log(url, body);
     return axios.post(url, body);
   },
   forgotPassword: async (body: any) => {

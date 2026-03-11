@@ -1,5 +1,7 @@
 import authServices from "@/api/authApi";
+import SelectCustom from "@/components/select-custom";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useToastStore } from "@/stores/useToastStore";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -26,6 +28,7 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(false);
 
   const [form, setForm] = useState({
+    co_so: "",
     fullName: "",
     email: "",
     password: "",
@@ -35,6 +38,7 @@ export default function LoginScreen() {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const showToast = useToastStore((s) => s.showToast);
 
   const [loading, setLoading] = useState(false);
 
@@ -49,21 +53,27 @@ export default function LoginScreen() {
     } catch (error) {
       setLoading(false);
     }
-
-    // if (email !== "admin@tuyensinh.edu.vn" || password !== "admin123") {
-    //   throw new Error("Sai tài khoản hoặc mật khẩu");
-    // }
-
-    // Gọi store
-    // login(email);
-
-    // router.replace("/overview");
   };
 
   const handleRegister = async () => {
-    if (form.password !== form.confirmPassword) return;
+    try {
+      setLoading(true);
 
-    setRegistered(true);
+      await authServices.register({
+        email: form?.email,
+        name: form?.fullName,
+        password: form?.password,
+        co_so: form?.co_so,
+        password_confirmation: form?.confirmPassword,
+      });
+      showToast("Đăng ký thành công", "success");
+      setRegistered(true);
+      setLoading(false);
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+      showToast("Đăng ký thất bại", "error");
+    }
   };
 
   const handleChange = (name: string, value: string) => {
@@ -262,6 +272,27 @@ export default function LoginScreen() {
 
           {activeTab === "register" && !registered && (
             <View className="gap-y-4">
+              <View>
+                <Text className="text-sm text-gray-700 mb-2">Cơ sở</Text>
+                <View className="relative">
+                  <Ionicons
+                    name="business-outline"
+                    size={18}
+                    color="#9ca3af"
+                    className="absolute top-[12px] left-[8px] z-10"
+                  />
+                  <SelectCustom
+                    type="co_so"
+                    placeholder="Chọn cơ sở"
+                    className="!py-3 !pr-2 !pl-10 !h-12"
+                    value={form.co_so}
+                    onChange={(value) => {
+                      handleChange("co_so", value);
+                    }}
+                  />
+                </View>
+              </View>
+
               {/* FULLNAME */}
 
               <View>
@@ -420,6 +451,7 @@ export default function LoginScreen() {
                   setRegistered(false);
 
                   setForm({
+                    co_so: "",
                     fullName: "",
                     email: "",
                     password: "",

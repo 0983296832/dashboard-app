@@ -12,6 +12,7 @@ interface Props {
   options: Option[];
   onChange: (v: any) => void;
   placeholder?: string;
+  className?: string;
 }
 
 export default function SelectInput({
@@ -19,6 +20,7 @@ export default function SelectInput({
   options,
   onChange,
   placeholder = "Select...",
+  className,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -29,7 +31,7 @@ export default function SelectInput({
       {/* INPUT */}
       <Pressable
         onPress={() => setOpen(true)}
-        className="h-9 px-3 border border-gray-200 rounded-lg bg-gray-50 flex-row items-center justify-between"
+        className={`h-9 px-3 border border-gray-200 rounded-lg bg-gray-50 flex-row items-center justify-between ${className}`}
       >
         <Text className="text-sm text-gray-700">
           {selected?.label || placeholder}
