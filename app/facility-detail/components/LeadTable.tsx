@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import dayjs from "dayjs";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -11,6 +12,12 @@ interface Lead {
   daysPending: number;
   assignedTo: string;
   createdAt: string;
+  tinh_trang_goi_dien: string;
+  ten_hoc_sinh: string;
+  dien_thoai_phu_huynh: string;
+  ngay_tao: string;
+  nguoi_phu_trach: string;
+  nguon_khach_hang: string;
 }
 
 interface LeadTableProps {
@@ -18,7 +25,7 @@ interface LeadTableProps {
 }
 
 const statusConfig = {
-  new: { label: "Mới", bg: "bg-blue-100", text: "text-blue-700" },
+  moi: { label: "Mới", bg: "bg-blue-100", text: "text-blue-700" },
   contacted: {
     label: "Đã liên hệ",
     bg: "bg-emerald-100",
@@ -34,15 +41,22 @@ const statusConfig = {
 
 export default function LeadTable({ leads }: LeadTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  console.log(leads);
 
   return (
     <View className="gap-y-2">
       {leads.map((lead) => {
-        const isExpanded = expandedId === lead.id;
+        const isExpanded = expandedId === lead?.id;
+
+        const trang_thai =
+          lead.tinh_trang_goi_dien == "Chưa liên hệ" &&
+          dayjs().diff(dayjs(lead?.ngay_tao), "day", true) > 3
+            ? "Tồn đọng"
+            : lead.tinh_trang_goi_dien;
 
         return (
           <View
-            key={lead.id}
+            key={lead?.id}
             className="bg-white rounded-xl overflow-hidden"
             style={{
               shadowColor: "#000",
@@ -54,7 +68,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
             {/* Header */}
             <Pressable
               className="px-4 py-3 flex-row items-center justify-between"
-              onPress={() => setExpandedId(isExpanded ? null : lead.id)}
+              onPress={() => setExpandedId(isExpanded ? null : lead?.id)}
             >
               <View className="flex-row items-center gap-3">
                 <View className="w-9 h-9 items-center justify-center bg-emerald-100 rounded-full">
@@ -63,20 +77,21 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
                 <View>
                   <Text className="text-sm font-semibold text-gray-800">
-                    {lead.name}
+                    {lead?.ten_hoc_sinh}
                   </Text>
-                  <Text className="text-xs text-gray-500">{lead.phone}</Text>
+                  <Text className="text-xs text-gray-500">
+                    {lead?.dien_thoai_phu_huynh}
+                  </Text>
                 </View>
               </View>
 
               <View className="flex-row items-center gap-2">
                 <View
-                  className={`px-2 py-0.5 rounded-full ${statusConfig[lead.status].bg}`}
+                  className={`px-2 py-0.5  bg-emerald-100`}
+                  style={{ borderRadius: 9999 }}
                 >
-                  <Text
-                    className={`text-xs font-medium ${statusConfig[lead.status].text}`}
-                  >
-                    {statusConfig[lead.status].label}
+                  <Text className={`text-xs font-medium bg-emerald-100`}>
+                    {trang_thai}
                   </Text>
                 </View>
 
@@ -97,7 +112,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                       Nguồn:
                       <Text className="font-medium text-gray-700">
                         {" "}
-                        {lead.source}
+                        {lead?.nguon_khach_hang}
                       </Text>
                     </Text>
                   </View>
@@ -107,7 +122,7 @@ export default function LeadTable({ leads }: LeadTableProps) {
                       Phụ trách:
                       <Text className="font-medium text-gray-700">
                         {" "}
-                        {lead.assignedTo}
+                        {lead?.nguoi_phu_trach}
                       </Text>
                     </Text>
                   </View>
@@ -117,24 +132,29 @@ export default function LeadTable({ leads }: LeadTableProps) {
                       Ngày tạo:
                       <Text className="font-medium text-gray-700">
                         {" "}
-                        {lead.createdAt}
+                        {lead?.ngay_tao}
                       </Text>
                     </Text>
                   </View>
 
-                  {lead.daysPending > 0 && (
+                  {lead?.daysPending > 0 && (
                     <View className="w-1/2 mb-1">
                       <Text className="text-xs text-gray-500">
                         Tồn:
                         <Text
                           className={`font-bold ${
-                            lead.daysPending > 3
+                            lead?.daysPending > 3
                               ? "text-red-600"
                               : "text-yellow-600"
                           }`}
                         >
                           {" "}
-                          {lead.daysPending} ngày
+                          {dayjs().diff(
+                            dayjs(lead?.ngay_tao),
+                            "day",
+                            true,
+                          )}{" "}
+                          ngày
                         </Text>
                       </Text>
                     </View>

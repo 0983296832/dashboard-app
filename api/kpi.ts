@@ -18,8 +18,19 @@ const kpiServices = {
     return axiosInstance.delete(url);
   },
   getLeadKpi: (filter: object) => {
-    console.log("filter");
     const url = "/leads/kpi";
+    return axiosInstance.get(url, { params: filter });
+  },
+  getLeadKpiSummary: (filter: object) => {
+    const url = "/leads/summary";
+    return axiosInstance.get(url, { params: filter });
+  },
+  getLeadByDate: (filter: object) => {
+    const url = "/leads/by-date";
+    return axiosInstance.get(url, { params: filter });
+  },
+  getLeads: (filter: object) => {
+    const url = "/leads";
     return axiosInstance.get(url, { params: filter });
   },
 };

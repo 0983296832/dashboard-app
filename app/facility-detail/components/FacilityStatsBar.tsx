@@ -1,44 +1,52 @@
+import { formatNumber } from "@/lib/numberHelper";
 import { Text, View } from "react-native";
 
-interface FacilityStatsBarProps {
-  reg: number;
-  ne: number;
-  regRate: number;
-  kpi: number;
-  status: "excellent" | "good" | "warning" | "danger";
-}
-
 export default function FacilityStatsBar({
-  reg,
-  ne,
-  regRate,
-  kpi,
-  status,
-}: FacilityStatsBarProps) {
-  const badgeColor = {
-    excellent: "bg-emerald-500",
-    good: "bg-blue-500",
-    warning: "bg-yellow-500",
-    danger: "bg-red-500",
-  }[status];
-
+  facility,
+}: {
+  facility: {
+    soLead: number;
+    reg: {
+      achieved: number;
+      target: number;
+      percent: number;
+    };
+    nb: {
+      achieved: number;
+      target: number;
+      percent: number;
+    };
+    ne: {
+      achieved: number;
+      target: number;
+      percent: number;
+    };
+    total_kpi_percent: number;
+  };
+}) {
   return (
     <View className="bg-white rounded-2xl shadow-sm p-4 gap-y-4">
       {/* Stats */}
       <View className="flex-row gap-3">
         <View className="flex-1 bg-emerald-50 rounded-xl p-3 items-center">
           <Text className="text-xs text-gray-500 mb-1">REG</Text>
-          <Text className="text-2xl font-bold text-gray-800">{reg}</Text>
+          <Text className="text-2xl font-bold text-gray-800">
+            {formatNumber(facility?.reg?.achieved)}
+          </Text>
         </View>
 
         <View className="flex-1 bg-teal-50 rounded-xl p-3 items-center">
-          <Text className="text-xs text-gray-500 mb-1">NE</Text>
-          <Text className="text-2xl font-bold text-gray-800">{ne}</Text>
+          <Text className="text-xs text-gray-500 mb-1">NB</Text>
+          <Text className="text-2xl font-bold text-gray-800">
+            {formatNumber(facility?.nb?.achieved)}
+          </Text>
         </View>
 
         <View className="flex-1 bg-green-50 rounded-xl p-3 items-center">
-          <Text className="text-xs text-gray-500 mb-1">REG Rate</Text>
-          <Text className="text-2xl font-bold text-gray-800">{regRate}%</Text>
+          <Text className="text-xs text-gray-500 mb-1">NE</Text>
+          <Text className="text-2xl font-bold text-gray-800">
+            {formatNumber(facility?.ne?.achieved)}
+          </Text>
         </View>
       </View>
 
@@ -46,13 +54,15 @@ export default function FacilityStatsBar({
       <View>
         <View className="flex-row items-center justify-between mb-1">
           <Text className="text-xs text-gray-600 font-medium">Tiến độ KPI</Text>
-          <Text className="text-xs font-bold text-gray-800">{kpi}%</Text>
+          <Text className="text-xs font-bold text-gray-800">
+            {facility?.total_kpi_percent}%
+          </Text>
         </View>
 
         <View className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
           <View
-            className={`h-full rounded-full ${badgeColor}`}
-            style={{ width: `${Math.min(kpi, 100)}%` }}
+            className={`h-full rounded-full bg-emerald-500`}
+            style={{ width: `${Math.min(facility?.total_kpi_percent, 100)}%` }}
           />
         </View>
 

@@ -20,7 +20,6 @@ interface PeriodFilterProps {
   value: Period;
   onChange: (p: Period) => void;
 }
-
 function PeriodFilter({ value, onChange }: PeriodFilterProps) {
   return (
     <View className="flex-row gap-1">
@@ -53,9 +52,7 @@ export default function KPIPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [sortField, setSortField] = useState<
-    "pctReg" | "pctNb" | "pctNe" | "reg" | "nb" | "ne"
-  >("pctReg");
+
   const [facilityPeriod, setFacilityPeriod] = useState<Period>("month");
   const [kpiYear, setKpiYear] = useState<{
     soLead: number;
@@ -82,20 +79,6 @@ export default function KPIPage() {
   });
   const [facilitiesKPITable, setFacilitiesKPITable] = useState<any>([]);
 
-  const pctColor = (v: number | null) => {
-    if (v === null || v === 0) return "text-red-500";
-    if (v >= 30) return "text-emerald-600";
-    if (v >= 15) return "text-amber-600";
-    return "text-red-500";
-  };
-
-  const pctBg = (v: number | null) => {
-    if (v === null || v === 0) return "bg-red-50";
-    if (v >= 30) return "bg-emerald-50";
-    if (v >= 15) return "bg-amber-50";
-    return "bg-red-50";
-  };
-
   const getLeadKpis = async () => {
     try {
       setLoading(true);
@@ -114,7 +97,7 @@ export default function KPIPage() {
       const ne_val = data?.totals?.criteria_breakdown?.find(
         (v: any) => v?.filter_value == "NE",
       );
-      console.log(data);
+
       setKpiYear({
         soLead: data?.totals?.total_lead,
         reg: {
@@ -140,7 +123,6 @@ export default function KPIPage() {
         })),
       );
     } catch (error) {
-      console.log(error);
       setLoading(false);
     }
   };
@@ -451,7 +433,9 @@ export default function KPIPage() {
                     {/* Button */}
 
                     <Pressable
-                      onPress={() => router.push(`/facility-detail/${f?.id}`)}
+                      onPress={() =>
+                        router.push(`/facility-detail/${f?.co_so}`)
+                      }
                       className="w-full py-2 bg-orange-500 rounded-xl flex-row justify-center items-center"
                     >
                       <Text className="text-xs font-semibold text-white mr-1">
