@@ -1,10 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 import kpiServices from "@/api/kpi";
 import { formatNumber } from "@/lib/numberHelper";
+import { useLoadingStore } from "@/stores/useLoadingStore";
 import { yearlyKPI } from "../../../mocks/kpi";
 
 type Period = "week" | "month" | "quarter" | "year";
@@ -50,7 +57,8 @@ function PeriodFilter({ value, onChange }: PeriodFilterProps) {
 
 export default function KPIPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const showLoading = useLoadingStore((s) => s.showLoading);
+  const hideLoading = useLoadingStore((s) => s.hideLoading);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const [facilityPeriod, setFacilityPeriod] = useState<Period>("month");
@@ -78,10 +86,25 @@ export default function KPIPage() {
     ne: { achieved: 0, target: 0, percent: 0 },
   });
   const [facilitiesKPITable, setFacilitiesKPITable] = useState<any>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reloadScreen = async () => {
+    if (refreshing) return;
+
+    setRefreshing(true);
+
+    try {
+      await Promise.all([getLeadKpis()]);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const getLeadKpis = async () => {
     try {
-      setLoading(true);
+      showLoading();
       const { data } = await kpiServices.getLeadKpi({
         period_type: facilityPeriod,
         group_by: "co_so",
@@ -122,8 +145,9 @@ export default function KPIPage() {
           ...v,
         })),
       );
+      hideLoading();
     } catch (error) {
-      setLoading(false);
+      hideLoading();
     }
   };
 
@@ -133,7 +157,12 @@ export default function KPIPage() {
 
   return (
     <View className="flex-1 bg-gray-50 pb-20">
-      <ScrollView className="px-3 py-4">
+      <ScrollView
+        className="px-3 py-4"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={reloadScreen} />
+        }
+      >
         <Pressable
           onPress={() => router.push("/kpi-config")}
           className="w-full flex-row items-center justify-between px-4 py-3 bg-white rounded-xl border border-orange-100"
@@ -434,7 +463,10 @@ export default function KPIPage() {
 
                     <Pressable
                       onPress={() =>
-                        router.push(`/facility-detail/${f?.co_so}`)
+                        router.push(
+                          (`/facility-detail/${f?.co_so}` +
+                            "?source=kpi") as any,
+                        )
                       }
                       className="w-full py-2 bg-orange-500 rounded-xl flex-row justify-center items-center"
                     >

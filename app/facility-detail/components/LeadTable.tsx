@@ -1,3 +1,4 @@
+import { formatNumber } from "@/lib/numberHelper";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { useState } from "react";
@@ -41,7 +42,7 @@ const statusConfig = {
 
 export default function LeadTable({ leads }: LeadTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  console.log(leads);
+
 
   return (
     <View className="gap-y-2">
@@ -87,10 +88,12 @@ export default function LeadTable({ leads }: LeadTableProps) {
 
               <View className="flex-row items-center gap-2">
                 <View
-                  className={`px-2 py-0.5  bg-emerald-100`}
+                  className={`px-2 py-0.5  ${trang_thai == "Tồn đọng" ? "bg-red-100" : "bg-emerald-100"}`}
                   style={{ borderRadius: 9999 }}
                 >
-                  <Text className={`text-xs font-medium bg-emerald-100`}>
+                  <Text
+                    className={`text-xs font-medium ${trang_thai == "Tồn đọng" ? "text-red-500" : "text-emerald-500"} `}
+                  >
                     {trang_thai}
                   </Text>
                 </View>
@@ -137,22 +140,20 @@ export default function LeadTable({ leads }: LeadTableProps) {
                     </Text>
                   </View>
 
-                  {lead?.daysPending > 0 && (
+                  {trang_thai == "Tồn đọng" && (
                     <View className="w-1/2 mb-1">
                       <Text className="text-xs text-gray-500">
                         Tồn:
                         <Text
                           className={`font-bold ${
-                            lead?.daysPending > 3
+                            dayjs().diff(dayjs(lead?.ngay_tao), "day", true) > 7
                               ? "text-red-600"
                               : "text-yellow-600"
                           }`}
                         >
                           {" "}
-                          {dayjs().diff(
-                            dayjs(lead?.ngay_tao),
-                            "day",
-                            true,
+                          {formatNumber(
+                            dayjs().diff(dayjs(lead?.ngay_tao), "day", true),
                           )}{" "}
                           ngày
                         </Text>

@@ -8,12 +8,14 @@ export default function SelectCustom({
   className,
   type = "tinh_trang_nhap_hoc",
   placeholder = "Vui lòng chọn",
+  isClearable,
 }: {
   value: string;
   onChange: (v: any) => void;
   className?: string;
   type: "tinh_trang_nhap_hoc" | "co_so";
   placeholder?: string;
+  isClearable?: boolean;
 }) {
   const [options, setOptions] = useState<
     { value: string | number; label: string }[]
@@ -37,6 +39,7 @@ export default function SelectCustom({
       options={options}
       className={className}
       placeholder={placeholder}
+      isClearable={isClearable}
     />
   );
 }

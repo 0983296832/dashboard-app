@@ -1,6 +1,7 @@
 import authServices from "@/api/authApi";
 import SelectCustom from "@/components/select-custom";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLoadingStore } from "@/stores/useLoadingStore";
 import { useToastStore } from "@/stores/useToastStore";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -39,26 +40,30 @@ export default function LoginScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [registered, setRegistered] = useState(false);
   const showToast = useToastStore((s) => s.showToast);
-
+  const showLoading = useLoadingStore((s) => s.showLoading);
+  const hideLoading = useLoadingStore((s) => s.hideLoading);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
+      showLoading();
       setLoading(true);
       const res = await authServices.login({ email, password });
 
       login(res?.data?.data?.token);
       router.replace("/overview");
+      hideLoading();
       setLoading(false);
     } catch (error) {
+      hideLoading();
       setLoading(false);
     }
   };
 
   const handleRegister = async () => {
     try {
+      showLoading();
       setLoading(true);
-
       await authServices.register({
         email: form?.email,
         name: form?.fullName,
@@ -69,8 +74,10 @@ export default function LoginScreen() {
       showToast("Đăng ký thành công", "success");
       setRegistered(true);
       setLoading(false);
+      hideLoading();
     } catch (error) {
       console.log(error);
+      hideLoading();
       setLoading(false);
       showToast("Đăng ký thất bại", "error");
     }

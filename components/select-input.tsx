@@ -13,6 +13,7 @@ interface Props {
   onChange: (v: any) => void;
   placeholder?: string;
   className?: string;
+  isClearable?: boolean;
 }
 
 export default function SelectInput({
@@ -21,6 +22,7 @@ export default function SelectInput({
   onChange,
   placeholder = "Select...",
   className,
+  isClearable,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -36,8 +38,21 @@ export default function SelectInput({
         <Text className="text-sm text-gray-700">
           {selected?.label || placeholder}
         </Text>
+        <View className="flex flex-row gap-3">
+          {isClearable&&value && (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation(); // chặn trigger Pressable cha
+                onChange(null);
+              }}
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={16} color="#6b7280" />
+            </Pressable>
+          )}
 
-        <Ionicons name="chevron-down" size={16} color="#6b7280" />
+          <Ionicons name="chevron-down" size={16} color="#6b7280" />
+        </View>
       </Pressable>
 
       {/* MODAL */}

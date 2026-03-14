@@ -9,6 +9,10 @@ const overviewServices = {
     const url = "/leads/pie";
     return axiosInstance.get(url, { params: filter });
   },
+  getLeadPerformance: (filter?: object) => {
+    const url = "/leads/performance";
+    return axiosInstance.get(url, { params: filter });
+  },
 };
 
 export default overviewServices;

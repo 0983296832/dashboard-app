@@ -1,10 +1,11 @@
 import { ThemeProvider } from "@/lib/theme-context";
-import { SplashScreen, Stack } from "expo-router";
+import { router, SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import mainServices from "@/api/main";
+import LoadingOverlay from "@/components/loading";
 import Toast from "@/components/toast";
 import { useAuthStore } from "@/stores/useAuthStore";
 import "../global.css";
@@ -17,6 +18,7 @@ const AppContent = () => {
   const getCurrentUser = async () => {
     try {
       const data: any = await mainServices.getCurrentUser();
+      router.push("/overview");
       setUser?.({
         ...data?.data,
         avatar:
@@ -28,7 +30,7 @@ const AppContent = () => {
   };
 
   useEffect(() => {
-    getCurrentUser();
+    isAuthenticated && getCurrentUser();
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function RootLayout() {
       <ThemeProvider defaultTheme="system">
         <AppContent />
         <Toast />
+        <LoadingOverlay />
       </ThemeProvider>
     </>
   );

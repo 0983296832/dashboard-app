@@ -15,6 +15,14 @@ const mainServices = {
     const url = "/users";
     return axiosInstance.get(url, { params: filter });
   },
+  getNotifications: (filter?: object) => {
+    const url = "/notifications";
+    return axiosInstance.get(url, { params: filter });
+  },
+  readNotification: (id: number | string) => {
+    const url = `/notifications/${id}/read`;
+    return axiosInstance.put(url);
+  },
 };
 
 export default mainServices;

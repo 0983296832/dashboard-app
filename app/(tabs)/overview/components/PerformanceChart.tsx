@@ -1,4 +1,4 @@
-import { Dimensions, Text, View } from "react-native";
+import { Dimensions, ScrollView, Text, View } from "react-native";
 import Svg, {
   Circle,
   Defs,
@@ -9,199 +9,208 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 
-interface Props {
-  period: string;
-}
-
-const width = Dimensions.get("window").width - 40;
+const screenWidth = Dimensions.get("window").width - 40;
 const height = 240;
 
-export default function PerformanceChart({ period }: Props) {
-  const padding = 40;
+interface Dataset {
+  label: string;
+  data: number[];
+  color: string;
+  dashed?: boolean;
+}
 
-  const currentData =
-    period === "today"
-      ? [45, 52, 48, 65, 58, 72, 68, 75, 82, 78, 85, 90]
-      : period === "yesterday"
-        ? [40, 48, 45, 60, 55, 68, 65, 70, 78, 75, 80, 85]
-        : period === "week"
-          ? [35, 42, 38, 55, 50, 62, 58, 65, 72, 68, 75, 80]
-          : period === "month"
-            ? [30, 38, 35, 50, 45, 58, 55, 60, 68, 65, 70, 75]
-            : [25, 32, 28, 45, 40, 52, 48, 55, 62, 58, 65, 70];
+interface ChartData {
+  labels: string[];
+  datasets: Dataset[];
+}
 
-  const previousData = currentData.map((v) => Math.round(v * 0.88));
+interface Props {
+  data: ChartData;
+}
 
-  const chartWidth = width - padding * 2;
+export default function PerformanceChart({ data }: Props) {
+  const padding = 20;
+  const yAxisWidth = 40;
+
+  const { labels, datasets } = data;
+
+  const allValues = datasets.flatMap((d) => d.data);
+  const maxValue = Math.max(...allValues);
+
+  const niceMax = Math.ceil(maxValue / 5) * 5;
+
   const chartHeight = height - padding * 2;
 
-  const maxValue = Math.max(...currentData, ...previousData);
+  // mỗi label rộng 60px
+  const columnWidth = 60;
+  const chartWidth = labels.length * columnWidth;
 
-  const stepX = chartWidth / (currentData.length - 1);
+  const stepX = columnWidth;
 
   const getY = (value: number) =>
-    height - padding - (value / maxValue) * chartHeight;
+    height - padding - (value / niceMax) * chartHeight;
 
   const createLinePath = (data: number[]) =>
     data
       .map((value, index) => {
-        const x = padding + stepX * index;
+        const x = index * stepX + stepX / 2;
         const y = getY(value);
         return `${index === 0 ? "M" : "L"} ${x} ${y}`;
       })
       .join(" ");
 
   const createAreaPath = (data: number[]) => {
-    let path = `M ${padding} ${height - padding}`;
+    let path = `M ${stepX / 2} ${height - padding}`;
 
     data.forEach((value, index) => {
-      const x = padding + stepX * index;
+      const x = index * stepX + stepX / 2;
       const y = getY(value);
       path += ` L ${x} ${y}`;
     });
 
-    path += ` L ${width - padding} ${height - padding} Z`;
+    path += ` L ${chartWidth} ${height - padding} Z`;
 
     return path;
   };
 
-  const labels = [
-    "T2",
-    "T3",
-    "T4",
-    "T5",
-    "T6",
-    "T7",
-    "CN",
-    "T2",
-    "T3",
-    "T4",
-    "T5",
-    "T6",
-  ];
+  const yAxis = Array.from({ length: 6 }, (_, i) =>
+    Math.round((niceMax / 5) * (5 - i)),
+  );
 
   return (
     <View>
-      <Svg width={width} height={height}>
-        <Defs>
-          <LinearGradient id="gradientCurrent" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-            <Stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </LinearGradient>
+      <View className="flex-row">
+        {/* Y AXIS */}
+        <View style={{ width: yAxisWidth, height }}>
+          {yAxis.map((value, i) => {
+            const y = padding + (chartHeight / 5) * i;
 
-          <LinearGradient id="gradientPrev" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
-            <Stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-          </LinearGradient>
-        </Defs>
+            return (
+              <Text
+                key={i}
+                style={{
+                  position: "absolute",
+                  top: y - 8,
+                  right: 5,
+                  fontSize: 11,
+                  color: "#9ca3af",
+                }}
+              >
+                {value}
+              </Text>
+            );
+          })}
+        </View>
 
-        {/* GRID */}
-        {[0, 1, 2, 3, 4, 5].map((i) => {
-          const y = padding + (chartHeight / 5) * i;
+        {/* CHART SCROLL */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View>
+            <Svg width={chartWidth} height={height}>
+              <Defs>
+                {datasets.map((ds, i) => (
+                  <LinearGradient
+                    key={i}
+                    id={`gradient-${i}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <Stop offset="0%" stopColor={ds.color} stopOpacity="0.3" />
+                    <Stop offset="100%" stopColor={ds.color} stopOpacity="0" />
+                  </LinearGradient>
+                ))}
+              </Defs>
 
-          return (
-            <Line
-              key={i}
-              x1={padding}
-              x2={width - padding}
-              y1={y}
-              y2={y}
-              stroke="#f0f0f0"
-              strokeWidth={1}
-            />
-          );
-        })}
+              {/* GRID */}
+              {yAxis.map((_, i) => {
+                const y = padding + (chartHeight / 5) * i;
 
-        {/* Y AXIS LABEL */}
-        {[0, 1, 2, 3, 4, 5].map((i) => {
-          const value = Math.round((maxValue / 5) * (5 - i));
-          const y = padding + (chartHeight / 5) * i;
+                return (
+                  <Line
+                    key={i}
+                    x1={0}
+                    x2={chartWidth}
+                    y1={y}
+                    y2={y}
+                    stroke="#f0f0f0"
+                    strokeWidth={1}
+                  />
+                );
+              })}
 
-          return (
-            <SvgText
-              key={`y-${i}`}
-              x={padding - 10}
-              y={y + 4}
-              fontSize="11"
-              fill="#9ca3af"
-              textAnchor="end"
-            >
-              {value}
-            </SvgText>
-          );
-        })}
+              {/* AREA */}
+              {datasets.map((ds, i) => (
+                <Path
+                  key={`area-${i}`}
+                  d={createAreaPath(ds.data)}
+                  fill={`url(#gradient-${i})`}
+                />
+              ))}
 
-        {/* PREVIOUS AREA */}
-        <Path d={createAreaPath(previousData)} fill="url(#gradientPrev)" />
+              {/* LINE */}
+              {datasets.map((ds, i) => (
+                <Path
+                  key={`line-${i}`}
+                  d={createLinePath(ds.data)}
+                  stroke={ds.color}
+                  strokeWidth={3}
+                  fill="none"
+                  strokeDasharray={ds.dashed ? "5,5" : undefined}
+                />
+              ))}
 
-        {/* CURRENT AREA */}
-        <Path d={createAreaPath(currentData)} fill="url(#gradientCurrent)" />
+              {/* POINTS */}
+              {datasets.map((ds, di) =>
+                ds.data.map((v, i) => {
+                  const x = i * stepX + stepX / 2;
+                  const y = getY(v);
 
-        {/* PREVIOUS LINE */}
-        <Path
-          d={createLinePath(previousData)}
-          stroke="#3b82f6"
-          strokeWidth={2}
-          strokeDasharray="5,5"
-          fill="none"
-        />
+                  return (
+                    <Circle
+                      key={`${di}-${i}`}
+                      cx={x}
+                      cy={y}
+                      r={4}
+                      fill={ds.color}
+                    />
+                  );
+                }),
+              )}
 
-        {/* CURRENT LINE */}
-        <Path
-          d={createLinePath(currentData)}
-          stroke="#10b981"
-          strokeWidth={3}
-          fill="none"
-        />
+              {/* X AXIS */}
+              {labels.map((label, index) => {
+                const x = index * stepX + stepX / 2;
 
-        {/* POINTS CURRENT */}
-        {currentData.map((v, i) => {
-          const x = padding + stepX * i;
-          const y = getY(v);
-
-          return <Circle key={i} cx={x} cy={y} r={5} fill="#10b981" />;
-        })}
-
-        {/* POINTS PREVIOUS */}
-        {previousData.map((v, i) => {
-          const x = padding + stepX * i;
-          const y = getY(v);
-
-          return <Circle key={`p-${i}`} cx={x} cy={y} r={4} fill="#3b82f6" />;
-        })}
-
-        {/* X AXIS LABEL */}
-        {currentData.map((_, index) => {
-          if (index % 2 !== 0) return null;
-
-          const x = padding + stepX * index;
-
-          return (
-            <SvgText
-              key={`x-${index}`}
-              x={x}
-              y={height - padding + 20}
-              fontSize="11"
-              fill="#9ca3af"
-              textAnchor="middle"
-            >
-              {labels[index]}
-            </SvgText>
-          );
-        })}
-      </Svg>
+                return (
+                  <SvgText
+                    key={index}
+                    x={x}
+                    y={height - 5}
+                    fontSize="11"
+                    fill="#9ca3af"
+                    textAnchor="middle"
+                  >
+                    {label}
+                  </SvgText>
+                );
+              })}
+            </Svg>
+          </View>
+        </ScrollView>
+      </View>
 
       {/* LEGEND */}
-      <View className="flex-row justify-center mt-4 gap-x-6">
-        <View className="flex-row items-center">
-          <View className="w-3 h-3 rounded-full bg-emerald-500 mr-2" />
-          <Text className="text-xs text-gray-600">Kỳ này</Text>
-        </View>
-
-        <View className="flex-row items-center">
-          <View className="w-3 h-3 rounded-full bg-blue-500 mr-2" />
-          <Text className="text-xs text-gray-600">Cùng kỳ năm trước</Text>
-        </View>
+      <View className="flex-row justify-center mt-4 gap-x-6 flex-wrap">
+        {datasets.map((ds, i) => (
+          <View key={i} className="flex-row items-center">
+            <View
+              className="w-3 h-3 rounded-full mr-2"
+              style={{ backgroundColor: ds.color }}
+            />
+            <Text className="text-xs text-gray-600">{ds.label}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );

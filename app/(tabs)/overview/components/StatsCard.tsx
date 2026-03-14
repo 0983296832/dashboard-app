@@ -34,7 +34,7 @@ export default function StatsCard({
 
   return (
     <View
-      className={`${bgColorClasses[color]} rounded-2xl p-4 shadow-sm w-[48%]`}
+      className={`${bgColorClasses[color]} rounded-2xl p-4 shadow-sm w-[47.5%]`}
     >
       <View className="flex-row items-start justify-between mb-3">
         {/* Icon */}

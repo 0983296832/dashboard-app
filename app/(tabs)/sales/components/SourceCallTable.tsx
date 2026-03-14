@@ -1,7 +1,8 @@
+import { ChartColors } from "@/constants";
+import { formatNumber } from "@/lib/numberHelper";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { saleSourceCallData } from "../../../../mocks/sale";
 
 const cols = [
   { key: "answered", label: "Đã nghe máy", color: "#10b981" },
@@ -19,16 +20,8 @@ const cols = [
   { key: "transfer", label: "Chuyển cơ sở", color: "#059669" },
 ];
 
-export default function SourceCallTable() {
+export default function SourceCallTable({ data }: { data: any[] }) {
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
-
-  const totals = saleSourceCallData.reduce((acc: any, r: any) => {
-    cols.forEach((c) => {
-      acc[c.key] = (acc[c.key] || 0) + r[c.key];
-    });
-    acc.leads = (acc.leads || 0) + r.leads;
-    return acc;
-  }, {});
 
   return (
     <View className="bg-white rounded-2xl overflow-hidden mb-3">
@@ -53,11 +46,10 @@ export default function SourceCallTable() {
       </View>
 
       {/* LIST */}
-      {saleSourceCallData.map((row) => {
-        const isExpanded = expandedSource === row.source;
+      {data?.map((row: any, index) => {
+        const isExpanded = expandedSource === row?.co_so;
 
-        const answerRate =
-          row.leads > 0 ? Math.round((row.answered / row.leads) * 100) : 0;
+        const answerRate = row?.da_nghe_may?.percent;
 
         const rateColor =
           answerRate >= 80
@@ -81,10 +73,10 @@ export default function SourceCallTable() {
               : "#ef4444";
 
         return (
-          <View key={row.source} className="border-b border-gray-100">
+          <View key={index} className="border-b border-gray-100">
             {/* ROW */}
             <Pressable
-              onPress={() => setExpandedSource(isExpanded ? null : row.source)}
+              onPress={() => setExpandedSource(isExpanded ? null : row?.co_so)}
               className="px-4 py-3 flex-row items-center gap-3"
             >
               {/* ICON */}
@@ -95,7 +87,7 @@ export default function SourceCallTable() {
               {/* NAME */}
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-gray-800">
-                  {row.source}
+                  {row?.co_so}
                 </Text>
 
                 {/* progress */}
@@ -119,7 +111,7 @@ export default function SourceCallTable() {
 
               {/* TOTAL */}
               <Text className="text-sm font-bold text-gray-900 w-16 text-right">
-                {row.leads.toLocaleString("vi-VN")}
+                {row?.total}
               </Text>
 
               {/* CHEVRON */}
@@ -134,36 +126,30 @@ export default function SourceCallTable() {
             {isExpanded && (
               <View className="px-4 pb-4 bg-gray-50 border-t border-gray-100">
                 <View className="flex-row flex-wrap gap-2 mt-3">
-                  {cols.map((c) => {
-                    const val = row[c.key];
-                    const pct =
-                      row.leads > 0
-                        ? ((val / row.leads) * 100).toFixed(1)
-                        : "0";
-
+                  {row?.by_tinh_trang?.map((c: any, idx: number) => {
                     return (
                       <View
-                        key={c.key}
+                        key={idx}
                         className="bg-white rounded-xl p-3 flex-row items-center gap-2 w-[48%]"
                       >
                         <View
                           className="w-2 h-8 rounded-full"
-                          style={{ backgroundColor: c.color }}
+                          style={{ backgroundColor: ChartColors[idx] }}
                         />
 
                         <View className="flex-1">
                           <Text className="text-[10px] text-gray-400">
-                            {c.label}
+                            {c?.tinh_trang_goi_dien}
                           </Text>
 
                           <View className="flex-row items-end gap-1">
                             <Text className="text-sm font-bold text-gray-900">
-                              {val > 0 ? val.toLocaleString("vi-VN") : "—"}
+                              {c?.count > 0 ? formatNumber(c?.count) : "—"}
                             </Text>
 
-                            {val > 0 && (
+                            {c?.count > 0 && (
                               <Text className="text-[10px] text-gray-400">
-                                {pct}%
+                                {c?.percent}%
                               </Text>
                             )}
                           </View>
@@ -188,12 +174,16 @@ export default function SourceCallTable() {
           <Text className="text-sm font-bold text-gray-800">Tổng cộng</Text>
 
           <Text className="text-xs text-gray-400">
-            Đã nghe: {(totals.answered || 0).toLocaleString("vi-VN")} lead
+            Đã nghe:{" "}
+            {formatNumber(
+              data?.reduce((p, c) => p + c?.da_nghe_may?.count, 0),
+            ) || 0}{" "}
+            lead
           </Text>
         </View>
 
         <Text className="text-sm font-bold text-orange-600">
-          {(totals.leads || 0).toLocaleString("vi-VN")}
+          {formatNumber(data?.reduce((p, c) => p + c?.total, 0) || 0)}
         </Text>
       </View>
     </View>

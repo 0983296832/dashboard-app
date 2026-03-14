@@ -1,14 +1,41 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
-import { saleAnswerRateBySource } from "../../../../mocks/sale";
 
 const BAR_COLOR = "#8fad3c";
 const LINE_COLOR = "#e91e8c";
-const MAX_LEADS = 20000;
-const CHART_HEIGHT = 160;
 
-export default function AnswerRateChart() {
+const CHART_HEIGHT = 160;
+const COLUMN_WIDTH = 60;
+
+const TOP_PADDING = 16;
+const BOTTOM_PADDING = 12;
+
+export default function AnswerRateChart({
+  data,
+}: {
+  data: {
+    source: string;
+    leads: number;
+    answered: number;
+    answerRate: number;
+  }[];
+}) {
+  const maxLeads = Math.max(...data.map((d) => d.leads));
+
+  const niceMax = Math.ceil(maxLeads / 5000) * 5000;
+
+  const yAxis = Array.from({ length: 5 }, (_, i) => (niceMax / 4) * (4 - i));
+
+  const chartWidth = data.length * COLUMN_WIDTH;
+
+  const getY = (rate: number) => {
+    return (
+      TOP_PADDING +
+      (1 - rate / 100) * (CHART_HEIGHT - TOP_PADDING - BOTTOM_PADDING)
+    );
+  };
+
   return (
     <View className="bg-white rounded-2xl shadow-sm mb-3 overflow-hidden">
       {/* Header */}
@@ -42,111 +69,135 @@ export default function AnswerRateChart() {
         <View className="flex-row">
           {/* Y axis left */}
           <View className="justify-between pr-2 h-40 w-10">
-            <Text className="text-xs text-gray-400 text-right">20 N</Text>
-            <Text className="text-xs text-gray-400 text-right">15 N</Text>
-            <Text className="text-xs text-gray-400 text-right">10 N</Text>
-            <Text className="text-xs text-gray-400 text-right">5 N</Text>
-            <Text className="text-xs text-gray-400 text-right">0</Text>
+            {yAxis.map((v, i) => {
+              const value = Math.floor(v); // bỏ phần thập phân
+
+              return (
+                <Text key={i} className="text-xs text-gray-400 text-right">
+                  {value >= 1000 ? `${Math.floor(value / 1000)} N` : value}
+                </Text>
+              );
+            })}
           </View>
 
-          {/* Chart area */}
-          <View className="flex-1 relative h-40">
-            {/* Grid lines */}
-            {[0, 25, 50, 75, 100].map((pct) => (
+          {/* Scroll chart */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View>
+              {/* Chart area */}
               <View
-                key={pct}
-                className="absolute w-full border-t border-gray-100"
-                style={{ bottom: `${pct}%` }}
-              />
-            ))}
+                style={{ width: chartWidth, height: CHART_HEIGHT }}
+                className="relative"
+              >
+                {/* Grid */}
+                {[0, 25, 50, 75, 100].map((pct) => (
+                  <View
+                    key={pct}
+                    className="absolute w-full border-t border-gray-100"
+                    style={{ bottom: `${pct}%` }}
+                  />
+                ))}
 
-            {/* Bars */}
-            <View className="absolute inset-0 flex-row items-end justify-around px-2">
-              {saleAnswerRateBySource.map((d) => {
-                const barH = (d.leads / MAX_LEADS) * 100;
+                {/* Bars */}
+                <View className="absolute inset-0 flex-row items-end">
+                  {data.map((d) => {
+                    const barH = (d.leads / niceMax) * 100;
 
-                return (
+                    return (
+                      <View
+                        key={d.source}
+                        style={{ width: COLUMN_WIDTH }}
+                        className="items-center justify-end"
+                      >
+                        <View
+                          className="w-8 rounded-t-sm"
+                          style={{
+                            height: `${barH}%`,
+                            backgroundColor: BAR_COLOR,
+                          }}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Line chart */}
+                <Svg
+                  width={chartWidth}
+                  height={CHART_HEIGHT}
+                  style={{ position: "absolute" }}
+                >
+                  {/* Lines */}
+                  {data.map((d, i) => {
+                    const x = i * COLUMN_WIDTH + COLUMN_WIDTH / 2;
+                    const y = getY(d.answerRate);
+
+                    const next = data[i + 1];
+                    if (!next) return null;
+
+                    const nx = (i + 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2;
+                    const ny = getY(next.answerRate);
+
+                    return (
+                      <Line
+                        key={i}
+                        x1={x}
+                        y1={y}
+                        x2={nx}
+                        y2={ny}
+                        stroke={LINE_COLOR}
+                        strokeWidth="2"
+                      />
+                    );
+                  })}
+
+                  {/* Points */}
+                  {data.map((d, i) => {
+                    const x = i * COLUMN_WIDTH + COLUMN_WIDTH / 2;
+                    const y = getY(d.answerRate);
+
+                    return (
+                      <React.Fragment key={i}>
+                        <Circle
+                          cx={x}
+                          cy={y}
+                          r="4"
+                          fill="white"
+                          stroke={LINE_COLOR}
+                          strokeWidth="2"
+                        />
+
+                        <SvgText
+                          x={x}
+                          y={y - 8}
+                          fontSize="9"
+                          fill={LINE_COLOR}
+                          fontWeight="600"
+                          textAnchor="middle"
+                        >
+                          {d.answerRate}%
+                        </SvgText>
+                      </React.Fragment>
+                    );
+                  })}
+                </Svg>
+              </View>
+
+              {/* X axis */}
+              <View className="flex-row mt-1">
+                {data.map((d) => (
                   <View
                     key={d.source}
-                    className="flex-1 items-center justify-end"
+                    style={{ width: COLUMN_WIDTH }}
+                    className="items-center"
                   >
-                    <View
-                      className="w-8 rounded-t-sm"
-                      style={{
-                        height: `${barH}%`,
-                        backgroundColor: BAR_COLOR,
-                      }}
-                    />
+                    <Text className="text-xs text-gray-500 text-center">
+                      {d.source}
+                    </Text>
                   </View>
-                );
-              })}
+                ))}
+              </View>
             </View>
-
-            {/* LINE CHART */}
-            <Svg
-              width="100%"
-              height={CHART_HEIGHT}
-              style={{ position: "absolute" }}
-            >
-              {saleAnswerRateBySource.map((d, i) => {
-                const total = saleAnswerRateBySource.length;
-
-                const x = ((i + 0.5) / total) * 100;
-                const y = 100 - d.answerRate;
-
-                const next = saleAnswerRateBySource[i + 1];
-                if (!next) return null;
-
-                const nx = ((i + 1.5) / total) * 100;
-                const ny = 100 - next.answerRate;
-
-                return (
-                  <Line
-                    key={i}
-                    x1={`${x}%`}
-                    y1={`${y}%`}
-                    x2={`${nx}%`}
-                    y2={`${ny}%`}
-                    stroke={LINE_COLOR}
-                    strokeWidth="2"
-                  />
-                );
-              })}
-
-              {saleAnswerRateBySource.map((d, i) => {
-                const total = saleAnswerRateBySource.length;
-
-                const x = ((i + 0.5) / total) * 100;
-                const y = 100 - d.answerRate;
-
-                return (
-                  <React.Fragment key={i}>
-                    <Circle
-                      key={`c-${i}`}
-                      cx={`${x}%`}
-                      cy={`${y}%`}
-                      r="4"
-                      fill="white"
-                      stroke={LINE_COLOR}
-                      strokeWidth="2"
-                    />
-
-                    <SvgText
-                      key={`t-${i}`}
-                      x={`${x}%`}
-                      y={`${y - 3}%`}
-                      fontSize="9"
-                      fill={LINE_COLOR}
-                      fontWeight="600"
-                      textAnchor="middle"
-                    >
-                      {d.answerRate}%
-                    </SvgText>
-                  </React.Fragment>
-                );
-              })}
-            </Svg>
-          </View>
+          </ScrollView>
 
           {/* Y axis right */}
           <View className="justify-between pl-2 h-40 w-10">
@@ -156,17 +207,6 @@ export default function AnswerRateChart() {
             <Text className="text-xs text-gray-400">25%</Text>
             <Text className="text-xs text-gray-400">0%</Text>
           </View>
-        </View>
-
-        {/* X axis */}
-        <View className="flex-row pl-10 pr-10 mt-1">
-          {saleAnswerRateBySource.map((d) => (
-            <View key={d.source} className="flex-1 items-center">
-              <Text className="text-xs text-gray-500 text-center">
-                {d.source}
-              </Text>
-            </View>
-          ))}
         </View>
       </View>
     </View>

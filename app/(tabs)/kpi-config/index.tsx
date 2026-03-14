@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -11,9 +12,9 @@ import {
 
 import kpiServices from "@/api/kpi";
 import { formatNumber } from "@/lib/numberHelper";
+import { useLoadingStore } from "@/stores/useLoadingStore";
 import { useToastStore } from "@/stores/useToastStore";
 import dayjs from "dayjs";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   kpiTargets as initialTargets,
   KPITarget,
@@ -21,14 +22,6 @@ import {
 import KPITargetForm from "./components/KPITargetForm";
 
 type FilterType = "all" | "month" | "quarter" | "year";
-
-const FILTER_VALUE_COLORS: Record<string, string> = {
-  REG: "bg-orange-100 text-orange-600",
-  NB: "bg-emerald-100 text-emerald-600",
-  NE: "bg-amber-100 text-amber-700",
-  LEAD: "bg-gray-100 text-gray-600",
-  CANCEL: "bg-red-100 text-red-500",
-};
 
 const PERIOD_LABEL: Record<string, string> = {
   month: "Tháng",
@@ -50,6 +43,8 @@ export default function KPIConfigPage() {
   const [editing, setEditing] = useState<KPITarget | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const showToast = useToastStore((s) => s.showToast);
+  const showLoading = useLoadingStore((s) => s.showLoading);
+  const hideLoading = useLoadingStore((s) => s.hideLoading);
   const filtered = targets?.filter((t) => {
     const matchFilter = filter === "all" || t?.period_type === filter;
 
@@ -59,6 +54,21 @@ export default function KPIConfigPage() {
 
     return matchFilter && matchSearch;
   });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reloadScreen = async () => {
+    if (refreshing) return;
+
+    setRefreshing(true);
+
+    try {
+      await Promise.all([getListTarget()]);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const getListTarget = async () => {
     try {
@@ -71,6 +81,7 @@ export default function KPIConfigPage() {
   };
 
   const handleSave = async (data: Omit<KPITarget, "id"> & { id?: string }) => {
+    showLoading();
     try {
       if (data.id) {
         await kpiServices.putKpiTarget(data.id, data);
@@ -84,18 +95,24 @@ export default function KPIConfigPage() {
 
       setShowForm(false);
       setEditing(null);
+      hideLoading();
     } catch (error) {
+      hideLoading();
       showToast("Thao tác thất bại", "error");
     }
   };
 
   const handleDelete = async (id: string) => {
+    showLoading();
     try {
       await kpiServices.deleteKpiTarget(deleteId as string | null);
       setTargets((prev) => prev?.filter((t) => t?.id != id));
       setDeleteId(null);
       showToast("Đã xoá KPI target", "success");
-    } catch (error) {}
+      hideLoading();
+    } catch (error) {
+      hideLoading();
+    }
   };
 
   const handleEdit = (t: KPITarget) => {
@@ -108,42 +125,18 @@ export default function KPIConfigPage() {
     setShowForm(true);
   };
 
-  const jsonExport = JSON.stringify(
-    targets?.map(
-      ({
-        id: _id,
-        name,
-        field,
-        filter_value,
-        target,
-        period_type,
-        year,
-        month,
-        quarter,
-        date_column,
-      }) => ({
-        name,
-        field,
-        filter_value,
-        target,
-        period_type,
-        year,
-        ...(period_type === "month" ? { month } : {}),
-        ...(period_type === "quarter" ? { quarter } : {}),
-        date_column,
-      }),
-    ),
-    null,
-    2,
-  );
-
   useEffect(() => {
     getListTarget();
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 pb-20">
-      <ScrollView className="px-3 py-4">
+    <React.Fragment>
+      <ScrollView
+        className="px-3 py-4 mb-20"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={reloadScreen} />
+        }
+      >
         {/* Search */}
         <View className="flex-row gap-2 mb-4">
           <View className="flex-1 relative">
@@ -315,6 +308,6 @@ export default function KPIConfigPage() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </React.Fragment>
   );
 }

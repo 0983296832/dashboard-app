@@ -1,3 +1,4 @@
+import authServices from "@/api/authApi";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -10,7 +11,8 @@ function AvatarMenu() {
   const router = useRouter();
   const { logout, user } = useAuthStore();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await authServices.logout();
     setOpen(false);
     logout();
     router.replace("/login");

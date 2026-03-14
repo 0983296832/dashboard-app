@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 import kpiServices from "@/api/kpi";
 import overviewServices from "@/api/overview";
 import { ChartColors } from "@/constants";
+import { useLoadingStore } from "@/stores/useLoadingStore";
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
 import FacilityMiniChart from "./components/FacilityMiniChart";
@@ -31,6 +33,18 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: "quarter", label: "Quý" },
   { key: "year", label: "Năm" },
 ];
+
+interface Dataset {
+  label: string;
+  data: number[];
+  color: string;
+  dashed?: boolean;
+}
+
+interface ChartData {
+  labels: string[];
+  datasets: Dataset[];
+}
 
 function PeriodFilter({
   value,
@@ -68,6 +82,11 @@ function PeriodFilter({
 
 export default function FacilityDetail() {
   const { id } = useLocalSearchParams();
+  const { source } = useLocalSearchParams();
+  const [lineChartData, setLineChartData] = useState<ChartData>({
+    labels: [],
+    datasets: [],
+  });
   const [activeTab, setActiveTab] = useState("overview");
   const [facilityPeriod, setFacilityPeriod] = useState<Period>("month");
   const [facility, setFacility] = useState<{
@@ -105,7 +124,8 @@ export default function FacilityDetail() {
       tinh_trang_goi_dien: string;
     }[]
   >([]);
-  const [loading, setLoading] = useState(false);
+  const showLoading = useLoadingStore((s) => s.showLoading);
+  const hideLoading = useLoadingStore((s) => s.hideLoading);
   const [summaryData, setSummaryData] = useState<{
     period: string;
     reg_rate: number;
@@ -129,10 +149,33 @@ export default function FacilityDetail() {
   const [totalPage, setTotalPage] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalLeads, setTotalLeads] = useState();
+  const year = dayjs().year();
+  const month = dayjs().month() + 1;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reloadScreen = async () => {
+    if (refreshing) return;
+
+    setRefreshing(true);
+
+    try {
+      await Promise.all([
+        getLeadKpis(),
+        getLeadKpiSummary(),
+        getLeadByDate(),
+        getLeadBySource(),
+        getLeads(1),
+      ]);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const getLeadKpis = async () => {
     try {
-      setLoading(true);
+      showLoading();
       const { data } = await kpiServices.getLeadKpi({
         period_type: facilityPeriod,
         status_values: ["REG", "NB", "NE"].join(","),
@@ -171,13 +214,14 @@ export default function FacilityDetail() {
         },
         total_kpi_percent: data?.totals?.total_kpi_percent,
       });
+      hideLoading();
     } catch (error) {
-      setLoading(false);
+      hideLoading();
     }
   };
   const getLeadKpiSummary = async () => {
     try {
-      setLoading(true);
+      showLoading();
       const { data } = await kpiServices.getLeadKpiSummary({
         period_type: facilityPeriod,
         date_column: "ngay_tao",
@@ -187,30 +231,46 @@ export default function FacilityDetail() {
       });
 
       setSummaryData(data);
+      hideLoading();
     } catch (error) {
-      setLoading(false);
+      hideLoading();
     }
   };
 
   const getLeadByDate = async () => {
     try {
-      setLoading(true);
+      showLoading();
       const { data } = await kpiServices.getLeadByDate({
-        period_type: facilityPeriod,
+        period_type: "month",
+        year: year,
+        // month: month,
         date_column: "ngay_tao",
         filter: {
           co_so: id,
         },
       });
-      console.log(data);
+
+      setLineChartData({
+        labels: data?.current?.map(
+          (v: { period_label: string }) => v?.period_label,
+        ),
+        datasets: [
+          {
+            label: id as string,
+            data: data?.current?.map((v: { count: number }) => v?.count),
+            color: "#10b981",
+          },
+        ],
+      });
+      hideLoading();
     } catch (error) {
-      setLoading(false);
+      hideLoading();
     }
   };
 
   const getLeadBySource = async () => {
     try {
-      setLoading(true);
+      showLoading();
       const { data } = await overviewServices.getLeadPie({
         period_type: facilityPeriod,
         group_by: "nguon_khach_hang",
@@ -221,15 +281,16 @@ export default function FacilityDetail() {
       });
 
       setLeadBySourceData(data?.data);
+      hideLoading();
     } catch (error) {
       console.log(error);
-      setLoading(false);
+      hideLoading();
     }
   };
 
   const getLeads = async (page: number) => {
     try {
-      setLoading(true);
+      showLoading();
       const res: any = await kpiServices.getLeads({
         period_type: facilityPeriod,
         page: page,
@@ -244,8 +305,9 @@ export default function FacilityDetail() {
       setCurrentPage(res?.meta?.current_page);
       setTotalPage(res?.meta?.last_page);
       setTotalLeads(res?.meta?.total);
+      hideLoading();
     } catch (error) {
-      setLoading(false);
+      hideLoading();
     }
   };
 
@@ -257,6 +319,10 @@ export default function FacilityDetail() {
     getLeads(1);
   }, [facilityPeriod]);
 
+  useEffect(() => {
+    getLeadByDate();
+  }, []);
+
   if (!facility) {
     return (
       <View className="flex-1 items-center justify-center bg-emerald-50">
@@ -266,7 +332,9 @@ export default function FacilityDetail() {
         </Text>
 
         <Pressable
-          onPress={() => router.push("/sales")}
+          onPress={() =>
+            router.push(source == "sale" ? "/sales" : "/yearly-plan")
+          }
           className="mt-4 px-5 py-2 bg-emerald-500 rounded-full"
         >
           <Text className="text-white text-sm font-semibold">Quay lại</Text>
@@ -283,13 +351,20 @@ export default function FacilityDetail() {
 
   return (
     <View className="flex-1 bg-emerald-50">
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={reloadScreen} />
+        }
+      >
         {/* HEADER */}
 
         <View className="bg-white shadow-sm">
           <View className="px-4 py-4 flex-row items-center gap-3">
             <Pressable
-              onPress={() => router.push("/sales")}
+              onPress={() =>
+                router.push(source == "sale" ? "/sales" : "/yearly-plan")
+              }
               className="w-9 h-9 items-center justify-center bg-gray-100 rounded-lg"
             >
               <Ionicons name="arrow-back" size={20} color="#374151" />
@@ -409,7 +484,7 @@ export default function FacilityDetail() {
                   Biểu đồ hiệu suất (12 tháng)
                 </Text>
 
-                <FacilityMiniChart facilityName={facility?.name} />
+                <FacilityMiniChart data={lineChartData} />
               </View>
               <View className="bg-white rounded-2xl shadow-sm p-4">
                 <Text className="text-sm font-bold text-gray-800 mb-3">
@@ -447,21 +522,29 @@ export default function FacilityDetail() {
 
           {activeTab === "leads" && (
             <View>
-              <LeadTable leads={leads} />
-              <View className="flex-row gap-2 justify-end items-center">
-                <TouchableOpacity>
+              <LeadTable leads={leads as any} />
+              <View className="flex-row gap-2 justify-end items-center mt-2">
+                <TouchableOpacity
+                  onPress={() => {
+                    currentPage > 1 && getLeads(currentPage - 1);
+                  }}
+                >
                   <Ionicons
                     name="caret-back-circle-outline"
                     size={38}
-                    color={true ? "#059669" : "#6b7280"}
+                    color={currentPage > 1 ? "#059669" : "#e5e7eb"}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    currentPage < totalPage && getLeads(currentPage + 1);
+                  }}
+                >
                   <Ionicons
                     className="rotate-180"
                     name="caret-back-circle-outline"
                     size={38}
-                    color={true ? "#059669" : "#6b7280"}
+                    color={currentPage < totalPage ? "#059669" : "#e5e7eb"}
                   />
                 </TouchableOpacity>
               </View>

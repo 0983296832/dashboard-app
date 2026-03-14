@@ -1,13 +1,14 @@
 import overviewServices from "@/api/overview";
 import { ChartColors } from "@/constants";
 import { formatNumber } from "@/lib/numberHelper";
+import { useLoadingStore } from "@/stores/useLoadingStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -17,222 +18,17 @@ import { Path, Svg } from "react-native-svg";
 import PerformanceChart from "./components/PerformanceChart";
 import StatsCard from "./components/StatsCard";
 
-// import PerformanceChart from "./components/PerformanceChart";
-// import StatsCard from "./components/StatsCard";
+interface Dataset {
+  label: string;
+  data: number[];
+  color: string;
+  dashed?: boolean;
+}
 
-const comparisonDataMap: Record<string, typeof comparisonDataBase> = {
-  day: [
-    {
-      title: "Tổng Lead",
-      currentValue: "87",
-      previousValue: "74",
-      change: "+17.6%",
-      isPositive: true,
-      icon: "person-add-outline",
-    },
-    {
-      title: "Tổng REG",
-      currentValue: "61",
-      previousValue: "55",
-      change: "+10.9%",
-      isPositive: true,
-      icon: "document-text-outline",
-    },
-    {
-      title: "Tổng NE",
-      currentValue: "45",
-      previousValue: "40",
-      change: "+12.5%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-    },
-    {
-      title: "REG Rate",
-      currentValue: "70.1%",
-      previousValue: "74.3%",
-      change: "-4.2%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-    },
-  ],
-
-  week: [
-    {
-      title: "Tổng Lead",
-      currentValue: "542",
-      previousValue: "498",
-      change: "+8.8%",
-      isPositive: true,
-      icon: "person-add-outline",
-    },
-    {
-      title: "Tổng REG",
-      currentValue: "378",
-      previousValue: "351",
-      change: "+7.7%",
-      isPositive: true,
-      icon: "document-text-outline",
-    },
-    {
-      title: "Tổng NE",
-      currentValue: "290",
-      previousValue: "265",
-      change: "+9.4%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-    },
-    {
-      title: "REG Rate",
-      currentValue: "69.7%",
-      previousValue: "70.5%",
-      change: "-0.8%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-    },
-  ],
-
-  month: [
-    {
-      title: "Tổng Lead",
-      currentValue: "1,234",
-      previousValue: "1,098",
-      change: "+12.4%",
-      isPositive: true,
-      icon: "person-add-outline",
-    },
-    {
-      title: "Tổng REG",
-      currentValue: "856",
-      previousValue: "789",
-      change: "+8.5%",
-      isPositive: true,
-      icon: "document-text-outline",
-    },
-    {
-      title: "Tổng NE",
-      currentValue: "642",
-      previousValue: "555",
-      change: "+15.7%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-    },
-    {
-      title: "REG Rate",
-      currentValue: "69.4%",
-      previousValue: "71.9%",
-      change: "-2.5%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-    },
-  ],
-
-  quarter: [
-    {
-      title: "Tổng Lead",
-      currentValue: "3,812",
-      previousValue: "3,420",
-      change: "+11.5%",
-      isPositive: true,
-      icon: "person-add-outline",
-    },
-    {
-      title: "Tổng REG",
-      currentValue: "2,645",
-      previousValue: "2,390",
-      change: "+10.7%",
-      isPositive: true,
-      icon: "document-text-outline",
-    },
-    {
-      title: "Tổng NE",
-      currentValue: "1,980",
-      previousValue: "1,750",
-      change: "+13.1%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-    },
-    {
-      title: "REG Rate",
-      currentValue: "69.4%",
-      previousValue: "69.9%",
-      change: "-0.5%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-    },
-  ],
-
-  half: [
-    {
-      title: "Tổng Lead",
-      currentValue: "7,540",
-      previousValue: "6,890",
-      change: "+9.4%",
-      isPositive: true,
-      icon: "person-add-outline",
-    },
-    {
-      title: "Tổng REG",
-      currentValue: "5,210",
-      previousValue: "4,780",
-      change: "+9.0%",
-      isPositive: true,
-      icon: "document-text-outline",
-    },
-    {
-      title: "Tổng NE",
-      currentValue: "3,920",
-      previousValue: "3,540",
-      change: "+10.7%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-    },
-    {
-      title: "REG Rate",
-      currentValue: "69.1%",
-      previousValue: "69.4%",
-      change: "-0.3%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-    },
-  ],
-
-  year: [
-    {
-      title: "Tổng Lead",
-      currentValue: "14,820",
-      previousValue: "13,150",
-      change: "+12.7%",
-      isPositive: true,
-      icon: "person-add-outline",
-    },
-    {
-      title: "Tổng REG",
-      currentValue: "10,340",
-      previousValue: "9,210",
-      change: "+12.3%",
-      isPositive: true,
-      icon: "document-text-outline",
-    },
-    {
-      title: "Tổng NE",
-      currentValue: "7,860",
-      previousValue: "6,980",
-      change: "+12.6%",
-      isPositive: true,
-      icon: "checkmark-circle-outline",
-    },
-    {
-      title: "REG Rate",
-      currentValue: "69.8%",
-      previousValue: "70.0%",
-      change: "-0.2%",
-      isPositive: false,
-      icon: "stats-chart-outline",
-    },
-  ],
-};
-
-const comparisonDataBase: any = comparisonDataMap.month;
+interface ChartData {
+  labels: string[];
+  datasets: Dataset[];
+}
 
 const channelData = [
   { name: "Facebook", value: 432, color: "#10b981", percent: 35 },
@@ -333,7 +129,9 @@ function DonutChart({ data }: { data: typeof channelData }) {
 }
 
 export default function Dashboard() {
-  const [selectedPeriod, setSelectedPeriod] = useState("today");
+  const [selectedPeriod, setSelectedPeriod] = useState("month");
+  const [selectedOverviewPeriod, setSelectedOverviewPeriod] = useState("month");
+  const [selectedPiePeriod, setSelectedPiePeriod] = useState("month");
   const [compareType, setCompareType] = useState("month");
   const [dataStat, setDataStat] = useState<
     {
@@ -396,16 +194,43 @@ export default function Dashboard() {
       percent: number;
     }[]
   >([]);
+  const [lineChartData, setLineChartData] = useState<ChartData>({
+    labels: [],
+    datasets: [],
+  });
+  const showLoading = useLoadingStore((s) => s.showLoading);
+  const hideLoading = useLoadingStore((s) => s.hideLoading);
   const MAX_ITEM = 5;
 
   const [showAll, setShowAll] = useState(false);
   const year = dayjs().year();
   const month = dayjs().month() + 1;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reloadScreen = async () => {
+    if (refreshing) return;
+
+    setRefreshing(true);
+
+    try {
+      await Promise.all([
+        getLeadStat(),
+        getLeadCompare(compareType),
+        getPieChartData(),
+        getPerformanceChartData(),
+      ]);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const getLeadStat = async () => {
     try {
+      showLoading();
       const data: any = await overviewServices.getOverviewStats({
-        period_type: "month",
+        period_type: selectedOverviewPeriod,
         year: year,
         month: month,
         compare: "both",
@@ -468,13 +293,16 @@ export default function Dashboard() {
           color: "orange",
         },
       ]);
+      hideLoading();
     } catch (error) {
+      hideLoading();
       console.log(error);
     }
   };
 
   const getLeadCompare = async (type: string) => {
     try {
+      showLoading();
       const data: any = await overviewServices.getOverviewStats({
         period_type: type,
         compare: "previous",
@@ -540,17 +368,21 @@ export default function Dashboard() {
           icon: "stats-chart-outline",
         },
       ]);
+      hideLoading();
     } catch (error) {
       console.log(error);
+      hideLoading();
     }
   };
 
   const getPieChartData = async () => {
+    showLoading();
     try {
       const data: any = await overviewServices.getLeadPie({
-        period_type: "month",
+        period_type: selectedPiePeriod,
         limit: 1000,
         group_by: "nguon_khach_hang",
+        date_column: "ngay_tao",
       });
 
       setPieChartData(
@@ -561,23 +393,60 @@ export default function Dashboard() {
           percent: v?.percent,
         })) || [],
       );
+      hideLoading();
     } catch (error) {
+      hideLoading();
+      console.log(error);
+    }
+  };
+  const getPerformanceChartData = async () => {
+    showLoading();
+    try {
+      const { data }: any = await overviewServices.getLeadPerformance({
+        period_type: selectedPeriod,
+        limit: 1000,
+        group_by: "nguon_khach_hang",
+        date_column: "ngay_tao",
+      });
+
+      setLineChartData({
+        labels: data?.chart_data?.line?.labels as string[],
+        datasets: [
+          {
+            label: data?.chart_data?.line?.datasets?.[0]?.label,
+            data: data?.chart_data?.line?.datasets?.[0]?.data,
+            color: "#10b981",
+          },
+          {
+            label: `Cùng kỳ ${compareTypes?.find((v) => v?.id == selectedPeriod)?.label} trước`,
+            data: data?.previous?.daily?.map(
+              (v: { count: number }) => v?.count,
+            ),
+            color: "#3b82f6",
+            dashed: true,
+          },
+        ],
+      });
+      hideLoading();
+    } catch (error) {
+      hideLoading();
       console.log(error);
     }
   };
 
   useEffect(() => {
     getLeadStat();
-    getLeadCompare("month");
-    getPieChartData();
-  }, []);
+  }, [selectedOverviewPeriod]);
 
-  const periods = [
-    { id: "today", label: "Hôm nay" },
-    { id: "yesterday", label: "Hôm qua" },
-    { id: "week", label: "Tuần trước" },
-    { id: "month", label: "Tháng trước" },
-  ];
+  useEffect(() => {
+    getLeadCompare("month");
+  }, []);
+  useEffect(() => {
+    getPieChartData();
+  }, [selectedPiePeriod]);
+  useEffect(() => {
+    getPerformanceChartData();
+  }, [selectedPeriod]);
 
   const compareTypes = [
     { id: "day", label: "Ngày" },
@@ -603,12 +472,46 @@ export default function Dashboard() {
       colors={["#ecfdf5", "#ffffff", "#f0fdfa"]}
       className="flex-1"
     >
-      <ScrollView className="px-4 pt-4 pb-24">
-        {/* Stats */}
-        <View className="flex-row flex-wrap justify-between gap-4">
-          {dataStat.map((s, i) => (
-            <StatsCard key={i} {...s} />
-          ))}
+      <ScrollView
+        className="px-4 pt-4 pb-24"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={reloadScreen} />
+        }
+      >
+        <View className="bg-white rounded-2xl p-5">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="font-bold text-gray-800">Chỉ số tổng quan</Text>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {compareTypes.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => setSelectedOverviewPeriod(p.id)}
+                className={`px-4 py-2 rounded-full mr-2 ${
+                  selectedOverviewPeriod === p.id
+                    ? "bg-emerald-500"
+                    : "bg-gray-100"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-medium ${
+                    selectedOverviewPeriod === p.id
+                      ? "text-white"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {p.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          {/* Stats */}
+          <View className="flex-row flex-wrap justify-between gap-4 mt-3">
+            {dataStat.map((s, i) => (
+              <StatsCard key={i} {...s} />
+            ))}
+          </View>
         </View>
 
         {/* Chart Section */}
@@ -617,16 +520,10 @@ export default function Dashboard() {
             <Text className="font-bold text-gray-800">
               Hiệu suất theo thời gian
             </Text>
-
-            <MaterialCommunityIcons
-              name="dots-horizontal"
-              size={22}
-              color="#4b5563"
-            />
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {periods.map((p) => (
+            {compareTypes.map((p) => (
               <TouchableOpacity
                 key={p.id}
                 onPress={() => setSelectedPeriod(p.id)}
@@ -645,7 +542,7 @@ export default function Dashboard() {
             ))}
           </ScrollView>
 
-          <PerformanceChart period={selectedPeriod} />
+          <PerformanceChart data={lineChartData} />
         </View>
 
         <View className="bg-white rounded-2xl shadow-md p-5">
@@ -654,12 +551,6 @@ export default function Dashboard() {
             <Text className="text-base font-bold text-gray-800">
               So sánh cùng kỳ
             </Text>
-
-            {/* <View className="flex-row items-center gap-1 px-2 py-1 bg-emerald-50 rounded-lg">
-              <Text className="text-xs text-emerald-600 font-medium">
-                📅 Năm trước
-              </Text>
-            </View> */}
           </View>
 
           {/* Compare Type Selector */}
@@ -764,7 +655,7 @@ export default function Dashboard() {
         </View>
 
         {/* Donut Chart */}
-        <View className="bg-white rounded-2xl p-5 mt-6 shadow mb-6">
+        <View className="bg-white rounded-2xl p-5 mt-6 shadow mb-28">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="font-bold text-gray-800">
               MKT – Lead theo kênh
@@ -776,6 +667,38 @@ export default function Dashboard() {
               color="#059669"
             />
           </View>
+          {/* Compare Type Selector */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mb-5"
+          >
+            <View className="flex-row gap-2">
+              {compareTypes.map((type) => (
+                <Pressable
+                  key={type.id}
+                  onPress={() => {
+                    setSelectedPiePeriod(type.id);
+                  }}
+                  className={`px-3 py-1.5 rounded-full border ${
+                    selectedPiePeriod === type.id
+                      ? "bg-emerald-500 border-emerald-500"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-semibold ${
+                      selectedPiePeriod === type.id
+                        ? "text-white"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {type.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
 
           <DonutChart data={pieChartData} />
 
@@ -793,7 +716,7 @@ export default function Dashboard() {
                   </Text>
 
                   <Text className="text-xs font-bold text-gray-600">
-                    ({ch?.value} lead) {ch.percent}%
+                    ({formatNumber(ch?.value)} lead) {ch.percent}%
                   </Text>
                 </View>
               ),
@@ -806,64 +729,6 @@ export default function Dashboard() {
                 </Text>
               </Pressable>
             )}
-          </View>
-        </View>
-        <View className="bg-white rounded-2xl shadow-md p-5 mb-28">
-          {/* Header */}
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-base font-bold text-gray-800">
-              Cảnh báo gần đây
-            </Text>
-
-            <Pressable
-              onPress={() => {
-                router.push("/alerts");
-              }}
-            >
-              <Text className="text-xs text-emerald-600 font-medium">
-                Xem tất cả
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="gap-y-3">
-            {/* Alert 1 */}
-            <View className="flex-row items-start gap-3 p-3 bg-red-50 rounded-lg">
-              <View className="w-8 h-8 items-center justify-center bg-red-500 rounded-full">
-                <Ionicons name="alert-circle-outline" size={16} color="white" />
-              </View>
-
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">
-                  Cơ sở Hà Nội
-                </Text>
-
-                <Text className="text-xs text-gray-600 mt-1">
-                  15 lead tồn &gt; 3 ngày chưa xử lý
-                </Text>
-
-                <Text className="text-xs text-gray-400 mt-1">2 giờ trước</Text>
-              </View>
-            </View>
-
-            {/* Alert 2 */}
-            <View className="flex-row items-start gap-3 p-3 bg-yellow-50 rounded-lg">
-              <View className="w-8 h-8 items-center justify-center bg-yellow-500 rounded-full">
-                <Ionicons name="warning-outline" size={16} color="white" />
-              </View>
-
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">
-                  Cơ sở TP.HCM
-                </Text>
-
-                <Text className="text-xs text-gray-600 mt-1">
-                  KPI đạt 68%, dưới mức 70%
-                </Text>
-
-                <Text className="text-xs text-gray-400 mt-1">5 giờ trước</Text>
-              </View>
-            </View>
           </View>
         </View>
       </ScrollView>
