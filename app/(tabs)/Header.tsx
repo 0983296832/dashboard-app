@@ -12,10 +12,15 @@ function AvatarMenu() {
   const { logout, user } = useAuthStore();
 
   const handleLogout = async () => {
-    await authServices.logout();
-    setOpen(false);
-    logout();
-    router.replace("/login");
+    try {
+      await authServices.logout();
+      setOpen(false);
+      logout();
+      router.replace("/login");
+    } catch (error) {
+      logout();
+      router.replace("/login");
+    }
   };
 
   return (

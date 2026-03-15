@@ -34,14 +34,8 @@ const AppContent = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isLoading) {
-      SplashScreen.hideAsync();
-    }
-  }, [isLoading]);
-
-  if (isLoading) {
-    return null; // Or a custom loading component
-  }
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
